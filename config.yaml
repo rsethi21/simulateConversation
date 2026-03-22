@@ -1,0 +1,24 @@
+# Available Models
+available_models:
+  - "Qwen/Qwen2.5-7B-Instruct"
+
+# Directories
+model_cache_dir: "./models"
+vector_dir: "./vectors"
+
+# Default Settings
+default_temperature: 0.7
+default_top_k: 50
+max_tokens: 256
+default_intensity: 0.05  # New: Default steering intensity
+
+# Preloaded Steering Vectors (PyTorch .pt files)
+vector_a: "./vectors/vector_a.pt"  # For Model A
+vector_b: null  # For Model B
+
+# Default Personalities (one for each model, displayed in UI text boxes)
+default_personality_a: "Role play as a physician answering a patient's questions. You must act only as a physician and respond to the patient's queries. Engage in a natural conversation."
+default_personality_b: "Role play as a patient asking your physician questions. You must act only as a patient and ask the physician questions/share details the physician asks. Engage in a natural conversation."
+
+# UI Preferences
+ui_theme: "light"
