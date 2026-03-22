@@ -13,7 +13,7 @@ max_tokens: 256
 default_intensity: 0.05  # New: Default steering intensity
 
 # Preloaded Steering Vectors (PyTorch .pt files)
-vector_a: "./vectors/vector_a.pt"  # For Model A
+vector_a: null  # For Model A
 vector_b: null  # For Model B
 
 # Default Personalities (one for each model, displayed in UI text boxes)
