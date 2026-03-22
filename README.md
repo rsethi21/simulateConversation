@@ -10,6 +10,7 @@ streamlit run app.py
 
 # Configs:
 You can change which open source models to have as options by listing model names from huggingface under "available_models" key.
+
 Change "vector_a" and/or "vector_b" to null if you do not have steering vectors. Steering vectors created using [steering](https://github.com/steering-vectors/steering-vectors).
 
 # On UI:
