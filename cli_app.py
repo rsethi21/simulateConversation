@@ -10,12 +10,12 @@ from custom_steering_vectors import SteeringVectorManager
 from conversation_manager import ConversationManager
 
 def load_config(config_path="cli_config.yaml"):
-    """Loads configuration from config.yaml."""
+    """Loads configuration from cli_config.yaml."""
     try:
         with open(config_path, "r") as f:
             return yaml.safe_load(f)
     except FileNotFoundError:
-        print(f"Error: config.yaml not found at {config_path}")
+        print(f"Error: cli_config.yaml not found at {config_path}")
         sys.exit(1)
 
 def load_prompt_from_file(file_path):
@@ -122,8 +122,7 @@ def run_cli_conversation():
             responses_dict = conversation_manager.start_conversation(
                 starting_prompt,
                 temperature=current_temp,
-                max_tokens=max_tokens,
-                top_k=top_k
+                max_tokens=max_tokens
             )
             for model_key, content in responses_dict.items():
                 display_name = llm_a.model_display_name if model_key == "model_a" else llm_b.model_display_name
@@ -141,8 +140,7 @@ def run_cli_conversation():
                 # continue_conversation returns a dict like {"model_b": response_content}
                 responses_dict = conversation_manager.continue_conversation(
                     temperature=current_temp,
-                    max_tokens=max_tokens,
-                    top_k=top_k
+                    max_tokens=max_tokens
                 )
                 for model_key, content in responses_dict.items():
                     display_name = llm_a.model_display_name if model_key == "model_a" else llm_b.model_display_name
