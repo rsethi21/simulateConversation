@@ -1,3 +1,6 @@
+# Motivation
+Utilizing multi-agent interactions fosters emergent behavior and authentic information asymmetry that a single-instance narrator cannot replicate. By isolating the internal state of each entity, you prevent the "homogenization" of personas, allowing for more rigorous adversarial testing and distinct semantic profiles. This setup is particularly effective for uncovering edge cases in logic or tone, as each turn acts as an independent probe that forces the opposing instance to respond to unpredictable stimuli rather than a self-generated, globally-consistent script.
+
 # On command line:
 Some versions specific to testing machine (i.e. pytorch), but can change.
 ```
