@@ -1,0 +1,30 @@
+# Available Models
+model_a: "Qwen/Qwen2.5-7B-Instruct"
+model_b: "Qwen/Qwen2.5-7B-Instruct"
+
+# Directories
+model_cache_dir: "./models"
+vector_dir: "./vectors"
+
+# Default Settings
+default_temperature: 0.7
+default_top_k: 50
+max_tokens: 256
+default_intensity: 0.05
+
+# Preloaded Steering Vectors (PyTorch .pt files)
+vector_a: null
+vector_b: null
+
+# Default Personalities (one for each model, displayed in UI text boxes)
+default_personality_a: "Role play as a physician answering a patient's questions. You must act only as a physician and respond to the patient's queries. Engage in a natural conversation."
+default_personality_b: "Role play as a patient asking your physician questions. You must act only as a patient and ask the physician questions/share details the physician asks. Engage in a natural conversation."
+
+# UI Preferences
+ui_theme: "light"
+
+# CLI Settings
+cli_input_folder: "./cli_inputs" # Path to a folder containing question files
+cli_max_turns: 5 # Number of turns for the CLI conversation
+cli_output_folder: "./cli_conversations" # Folder to save individual conversation history files
+cli_starting_model: "model_a" # Which model starts the CLI conversation

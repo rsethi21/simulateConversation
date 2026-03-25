@@ -1,0 +1,164 @@
+import yaml
+import sys
+import os
+import time # Import time for runtime tracking
+import glob # Import glob for listing files in a directory
+
+from model_manager import ModelManager
+from llm_interface import LLMInterface
+from custom_steering_vectors import SteeringVectorManager
+from conversation_manager import ConversationManager
+
+def load_config(config_path="config.yaml"):
+    """Loads configuration from config.yaml."""
+    try:
+        with open(config_path, "r") as f:
+            return yaml.safe_load(f)
+    except FileNotFoundError:
+        print(f"Error: config.yaml not found at {config_path}")
+        sys.exit(1)
+
+def load_prompt_from_file(file_path):
+    """Loads a single prompt from a specified text file."""
+    if not os.path.exists(file_path):
+        print(f"Error: Prompt file not found at {file_path}")
+        return None
+    with open(file_path, "r", encoding="utf-8") as f:
+        return f.read().strip()
+
+def run_cli_conversation():
+    config = load_config()
+
+    print("--- Initializing CLI Dual LLM Conversation ---")
+
+    # Get CLI specific settings
+    cli_input_folder = config.get("cli_input_folder", "./cli_inputs")
+    cli_max_turns = config.get("cli_max_turns", 5)
+    cli_output_folder = config.get("cli_output_folder", "./cli_conversations")
+    cli_starting_model = config.get("cli_starting_model", "model_a")
+    
+    # Ensure output folder exists
+    os.makedirs(cli_output_folder, exist_ok=True)
+
+    # Initialize shared managers once
+    model_manager = ModelManager(cache_dir=config["model_cache_dir"])
+    vector_manager = SteeringVectorManager(vector_dir=config["vector_dir"], default_intensity=config["default_intensity"])
+    vector_manager.preload_vectors(config.get("vector_a"), config.get("vector_b"))
+
+    # Set common generation settings from config defaults
+    temp_a = config.get("default_temperature", 0.7)
+    temp_b = config.get("default_temperature", 0.7)
+    top_k = config.get("default_top_k", 50)
+    max_tokens = config.get("max_tokens", 256)
+    decay_rate = config.get("decay_rate", 0.95)
+
+    # Initialize LLM interfaces (can be reused across conversations)
+    model_a_name = config["model_a"]
+    model_b_name = config["model_b"]
+
+    llm_a = LLMInterface(model_a_name, model_manager)
+    llm_b = LLMInterface(model_b_name, model_manager)
+
+    llm_a.set_decay_rate(decay_rate)
+    llm_b.set_decay_rate(decay_rate)
+
+    # Set personalities
+    personality_a = config.get("default_personality_a", "")
+    personality_b = config.get("default_personality_b", "")
+    if personality_a:
+        llm_a.set_personality(personality_a)
+    if personality_b:
+        llm_b.set_personality(personality_b)
+
+    # Set preloaded steering vectors and initial intensity
+    vector_a_obj = vector_manager.get_vector('vector_a')
+    vector_b_obj = vector_manager.get_vector('vector_b')
+    if vector_a_obj:
+        llm_a.set_steering_vector(vector_a_obj)
+        llm_a.update_steering_intensity(config.get("default_intensity", 0.05))
+    if vector_b_obj:
+        llm_b.set_steering_vector(vector_b_obj)
+        llm_b.update_steering_intensity(config.get("default_intensity", 0.05))
+
+    # Find all question files in the input folder
+    question_files = glob.glob(os.path.join(cli_input_folder, "*.txt"))
+    if not question_files:
+        print(f"No .txt files found in input folder: {cli_input_folder}. Exiting.")
+        sys.exit(1)
+
+    print(f"Found {len(question_files)} conversation prompts in '{cli_input_folder}'")
+    print("-" * 40)
+
+    for i, question_file_path in enumerate(question_files):
+        file_base_name = os.path.basename(question_file_path)
+        print(f"\n--- Starting Conversation {i+1}/{len(question_files)}: {file_base_name} ---")
+
+        starting_prompt = load_prompt_from_file(question_file_path)
+        if not starting_prompt:
+            print(f"Skipping {file_base_name} due to empty or unreadable prompt.")
+            continue
+
+        # Start timer for this conversation
+        start_time = time.time()
+
+        # Re-initialize ConversationManager for each new conversation
+        conversation_manager = ConversationManager(llm_a, llm_b, cli_starting_model)
+        conversation_history = []
+
+        print(f"Prompt: '{starting_prompt}'")
+        
+        current_temp = temp_a if cli_starting_model == "model_a" else temp_b
+        try:
+            responses = conversation_manager.start_conversation(
+                starting_prompt,
+                temperature=current_temp,
+                max_tokens=max_tokens,
+                top_k=top_k
+            )
+            for role, content in responses:
+                print(f"[{role.upper()}]: {content}")
+                conversation_history.append(f"[{role.upper()}]: {content}")
+        except Exception as e:
+            print(f"Error starting conversation for {file_base_name}: {e}")
+            continue # Move to the next file
+
+        for turn in range(1, cli_max_turns):
+            print(f"\n--- Turn {turn+1} ---")
+            current_model_turn = conversation_manager.current_turn
+            current_temp = temp_a if current_model_turn == "model_a" else temp_b
+            try:
+                responses = conversation_manager.continue_conversation(
+                    temperature=current_temp,
+                    max_tokens=max_tokens,
+                    top_k=top_k
+                )
+                for role, content in responses:
+                    print(f"[{role.upper()}]: {content}")
+                    conversation_history.append(f"[{role.upper()}]: {content}")
+            except Exception as e:
+                print(f"Error during turn {turn+1} for {file_base_name}: {e}")
+                break # Exit on error for this conversation
+
+        # End timer for this conversation
+        end_time = time.time()
+        runtime = end_time - start_time
+        print(f"\n--- Conversation for {file_base_name} Finished (Runtime: {runtime:.2f} seconds) ---")
+
+        # Save conversation history to a file in the output folder
+        output_filename = os.path.splitext(file_base_name)[0] + "_conversation.txt"
+        output_file_path = os.path.join(cli_output_folder, output_filename)
+        try:
+            with open(output_file_path, "w", encoding="utf-8") as f:
+                f.write(f"--- Conversation for: {file_base_name} ---\n")
+                f.write(f"--- Runtime: {runtime:.2f} seconds ---\n\n")
+                for line in conversation_history:
+                    f.write(line + "\n")
+            print(f"Conversation history saved to {output_file_path}")
+        except IOError as e:
+            print(f"Error saving conversation history to {output_file_path}: {e}")
+        print("-" * 40)
+
+    print("\n--- All CLI Conversations Finished ---")
+
+if __name__ == "__main__":
+    run_cli_conversation()
