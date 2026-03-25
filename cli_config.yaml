@@ -20,6 +20,10 @@ vector_b: null
 default_personality_a: "Role play as a physician answering a patient's questions. You must act only as a physician and respond to the patient's queries. Engage in a natural conversation."
 default_personality_b: "Role play as a patient asking your physician questions. You must act only as a patient and ask the physician questions/share details the physician asks. Engage in a natural conversation."
 
+# Default Names for models in CLI
+default_name_a: "Physician" # Added for CLI display
+default_name_b: "Patient"   # Added for CLI display
+
 # UI Preferences
 ui_theme: "light"
 

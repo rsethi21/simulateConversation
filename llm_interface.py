@@ -6,8 +6,9 @@ import torch
 from steering_vectors import SteeringVector
 
 class LLMInterface:
-    def __init__(self, model_name: str, manager: ModelManager):
+    def __init__(self, model_name: str, model_display_name: str, manager: ModelManager):
         self.model_name = model_name
+        self.model_display_name = model_display_name
         self.manager = manager
         self.model_data = manager.load_model(model_name)
         self.model = self.model_data["model"]

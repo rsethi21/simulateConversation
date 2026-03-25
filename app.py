@@ -32,7 +32,7 @@ with st.sidebar:
     st.subheader("Personalities")
     personality_a = st.text_area("Model A Personality", value=config.get("default_personality_a", ""), placeholder="Enter personality prompt...", key="pers_a")
     personality_b = st.text_area("Model B Personality", value=config.get("default_personality_b", ""), placeholder="Enter personality prompt...", key="pers_b")
-    
+
     col_pers_a, col_pers_b = st.columns(2)
     with col_pers_a:
         if st.button("Update Personality A") and st.session_state.conversation:
@@ -43,6 +43,10 @@ with st.sidebar:
             st.session_state.conversation.model_b.update_personality(personality_b)
             st.success("Model B personality updated!")
     
+    st.subheader("Names")
+    name_a = st.text_input("Model A Name", value=config.get("default_name_a", "Model A"), key="name_a")
+    name_b = st.text_input("Model B Name", value=config.get("default_name_b", "Model B"), key="name_b")
+
     st.subheader("Steering Vector Intensity")
     intensity_a = st.slider("Intensity A", -2.0, 2.0, config["default_intensity"], step=0.01, key="intensity_a")
     intensity_b = st.slider("Intensity B", -2.0, 2.0, config["default_intensity"], step=0.01, key="intensity_b")
@@ -71,8 +75,8 @@ with st.sidebar:
     starting_prompt = st.text_area("Starting Prompt", placeholder="Enter the initial conversation topic...", key="starting_prompt", height=100)
     
     if st.button("Initialize Models"):
-        llm_a = LLMInterface(model_a, st.session_state.model_manager)
-        llm_b = LLMInterface(model_b, st.session_state.model_manager)
+        llm_a = LLMInterface(model_a, name_a, st.session_state.model_manager)
+        llm_b = LLMInterface(model_b, name_b, st.session_state.model_manager)
         
         llm_a.set_decay_rate(decay_rate)
         llm_b.set_decay_rate(decay_rate)
@@ -127,10 +131,10 @@ st.subheader("Conversation History")
 if st.session_state.conversation and st.session_state.conversation.history:
     for msg in st.session_state.conversation.history:
         if msg["role"] == "user":
-            st.write(f"**User:** {msg['content']}")
+            st.write(f"**Initial Query (on behalf of model not starting):** {msg['content']}")
         elif msg["role"] == "model_a":
-            st.write(f"**Model A:** {msg['content']}")
+            st.write(f"**{name_a}:** {msg['content']}")
         elif msg["role"] == "model_b":
-            st.write(f"**Model B:** {msg['content']}")
+            st.write(f"**{name_b}:** {msg['content']}")
 else:
     st.write("No conversation history yet. Initialize models and start a conversation!")

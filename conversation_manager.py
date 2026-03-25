@@ -20,11 +20,12 @@ class ConversationManager:
         context_lines = []
         for msg in recent:
             if msg["role"] == "user":
-                context_lines.append(f"User: {msg['content']}")
+                not_starting_model = self.model_b if self.starting_model == "model_a" else self.model_a
+                context_lines.append(f"{not_starting_model.model_display_name}: {msg['content']}")
             elif msg["role"] == "model_a":
-                context_lines.append(f"Model A: {msg['content']}")
+                context_lines.append(f"{self.model_a.model_display_name}: {msg['content']}")
             elif msg["role"] == "model_b":
-                context_lines.append(f"Model B: {msg['content']}")
+                context_lines.append(f"{self.model_b.model_display_name}: {msg['content']}")
         
         # Make it explicit who should speak next
         if self.current_turn == "model_a":
@@ -37,8 +38,15 @@ class ConversationManager:
     def _last_message_from(self, role: str) -> Optional[str]:
         """Return the most recent message from the given role, or None."""
         for msg in reversed(self.history):
+            name = self.model_a.model_display_name if role == "model_a" else self.model_b.model_display_name
+            final_message = ""
             if msg["role"] == role:
-                return msg["content"]
+                final_message += f"{name}: {msg['content']}"
+                if msg["role"] == "model_a":
+                    final_message += f"\nNext response by {self.model_a.model_display_name}:"
+                elif msg["role"] == "model_b":
+                    final_message += f"\nNext response by {self.model_b.model_display_name}:"
+                return final_message
         return None
     
     def generate_response(self, model: LLMInterface, temperature: float = 0.7,

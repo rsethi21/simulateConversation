@@ -1,15 +1,15 @@
 import yaml
 import sys
 import os
-import time # Import time for runtime tracking
-import glob # Import glob for listing files in a directory
+import time
+import glob
 
 from model_manager import ModelManager
 from llm_interface import LLMInterface
 from custom_steering_vectors import SteeringVectorManager
 from conversation_manager import ConversationManager
 
-def load_config(config_path="config.yaml"):
+def load_config(config_path="cli_config.yaml"):
     """Loads configuration from config.yaml."""
     try:
         with open(config_path, "r") as f:
@@ -52,12 +52,16 @@ def run_cli_conversation():
     max_tokens = config.get("max_tokens", 256)
     decay_rate = config.get("decay_rate", 0.95)
 
-    # Initialize LLM interfaces (can be reused across conversations)
-    model_a_name = config["model_a"]
-    model_b_name = config["model_b"]
+    # Load display names for models
+    display_name_a = config.get("default_name_a", "Model A")
+    display_name_b = config.get("default_name_b", "Model B")
 
-    llm_a = LLMInterface(model_a_name, model_manager)
-    llm_b = LLMInterface(model_b_name, model_manager)
+    # Initialize LLM interfaces (can be reused across conversations)
+    model_a_id = config["model_a"]
+    model_b_id = config["model_b"]
+
+    llm_a = LLMInterface(model_a_id, display_name_a, model_manager) # Pass display_name_a
+    llm_b = LLMInterface(model_b_id, display_name_b, model_manager) # Pass display_name_b
 
     llm_a.set_decay_rate(decay_rate)
     llm_b.set_decay_rate(decay_rate)
@@ -105,19 +109,26 @@ def run_cli_conversation():
         conversation_manager = ConversationManager(llm_a, llm_b, cli_starting_model)
         conversation_history = []
 
-        print(f"Prompt: '{starting_prompt}'")
+        # The initial user prompt is technically from the "user" role, but for CLI output, we can attribute it
+        # to the non-starting model's personality, if that's how it's framed.
+        # However, for consistency with app.py's "Initial Query (on behalf of model not starting)",
+        # we'll just log it as "Initial Prompt".
+        print(f"[INITIAL PROMPT]: {starting_prompt}")
+        conversation_history.append(f"[INITIAL PROMPT]: {starting_prompt}")
         
         current_temp = temp_a if cli_starting_model == "model_a" else temp_b
         try:
-            responses = conversation_manager.start_conversation(
+            # start_conversation returns a dict like {"model_a": response_content}
+            responses_dict = conversation_manager.start_conversation(
                 starting_prompt,
                 temperature=current_temp,
                 max_tokens=max_tokens,
                 top_k=top_k
             )
-            for role, content in responses:
-                print(f"[{role.upper()}]: {content}")
-                conversation_history.append(f"[{role.upper()}]: {content}")
+            for model_key, content in responses_dict.items():
+                display_name = llm_a.model_display_name if model_key == "model_a" else llm_b.model_display_name
+                print(f"[{display_name}]: {content}")
+                conversation_history.append(f"[{display_name}]: {content}")
         except Exception as e:
             print(f"Error starting conversation for {file_base_name}: {e}")
             continue # Move to the next file
@@ -127,14 +138,16 @@ def run_cli_conversation():
             current_model_turn = conversation_manager.current_turn
             current_temp = temp_a if current_model_turn == "model_a" else temp_b
             try:
-                responses = conversation_manager.continue_conversation(
+                # continue_conversation returns a dict like {"model_b": response_content}
+                responses_dict = conversation_manager.continue_conversation(
                     temperature=current_temp,
                     max_tokens=max_tokens,
                     top_k=top_k
                 )
-                for role, content in responses:
-                    print(f"[{role.upper()}]: {content}")
-                    conversation_history.append(f"[{role.upper()}]: {content}")
+                for model_key, content in responses_dict.items():
+                    display_name = llm_a.model_display_name if model_key == "model_a" else llm_b.model_display_name
+                    print(f"[{display_name}]: {content}")
+                    conversation_history.append(f"[{display_name}]: {content}")
             except Exception as e:
                 print(f"Error during turn {turn+1} for {file_base_name}: {e}")
                 break # Exit on error for this conversation
