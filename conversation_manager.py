@@ -29,9 +29,9 @@ class ConversationManager:
         
         # Make it explicit who should speak next
         if self.current_turn == "model_a":
-            context_lines.append("Next response (Model A):")
+            context_lines.append(f"Next response ({self.model_a.model_display_name}):")
         else:
-            context_lines.append("Next response (Model B):")
+            context_lines.append(f"Next response ({self.model_b.model_display_name}):")
         
         return "\n".join(context_lines)
     
@@ -50,12 +50,12 @@ class ConversationManager:
         return None
     
     def generate_response(self, model: LLMInterface, temperature: float = 0.7,
-                         max_tokens: int = 256) -> str:
+                         max_tokens: int = 256, max_context: int = 5) -> str:
         """Generate a response from the specified model using only the other side’s last message."""
         if model is self.model_a:
-            user_prompt = self._last_message_from("model_b") or self._last_message_from("user") or ""
+            user_prompt = self.get_context(max_messages=max_context) or self.get_context(max_messages=max_context) or ""
         else:
-            user_prompt = self._last_message_from("model_a") or self._last_message_from("user") or ""
+            user_prompt = self.get_context(max_messages=max_context) or self.get_context(max_context) or ""
 
         if model.steering_vector:
             response = model.generate_stream(user_prompt, temperature=temperature, max_tokens=max_tokens)
@@ -79,15 +79,15 @@ class ConversationManager:
         
         return {self.starting_model: response}
     
-    def continue_conversation(self, temperature: float = 0.7, max_tokens: int = 256) -> Dict[str, str]:
+    def continue_conversation(self, temperature: float = 0.7, max_tokens: int = 256, max_context: int = 5) -> Dict[str, str]:
         """Continue the conversation: Generate the next response from the current turn's model."""
         if self.current_turn == "model_a":
-            response = self.generate_response(self.model_a, temperature, max_tokens)
+            response = self.generate_response(self.model_a, temperature, max_tokens, max_context)
             self.history.append({"role": "model_a", "content": response})
             self.current_turn = "model_b"
             return {"model_a": response}
         else:
-            response = self.generate_response(self.model_b, temperature, max_tokens)
+            response = self.generate_response(self.model_b, temperature, max_tokens, max_context)
             self.history.append({"role": "model_b", "content": response})
             self.current_turn = "model_a"
             return {"model_b": response}

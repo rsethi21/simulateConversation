@@ -51,6 +51,7 @@ def run_cli_conversation():
     top_k = config.get("default_top_k", 50)
     max_tokens = config.get("max_tokens", 256)
     decay_rate = config.get("decay_rate", 0.95)
+    max_context = config.get("max_context_messages", 2)
 
     # Load display names for models
     display_name_a = config.get("default_name_a", "Model A")
@@ -140,7 +141,8 @@ def run_cli_conversation():
                 # continue_conversation returns a dict like {"model_b": response_content}
                 responses_dict = conversation_manager.continue_conversation(
                     temperature=current_temp,
-                    max_tokens=max_tokens
+                    max_tokens=max_tokens,
+                    max_context=max_context
                 )
                 for model_key, content in responses_dict.items():
                     display_name = llm_a.model_display_name if model_key == "model_a" else llm_b.model_display_name

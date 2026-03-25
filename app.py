@@ -68,7 +68,8 @@ with st.sidebar:
     temp_b = st.slider("Temperature B", 0.0, 2.0, 0.7, key="temp_b")
     top_k = st.slider("Top-K", 1, 100, 50, key="top_k")
     max_tokens = st.slider("Max Tokens", 50, 500, 256)
-    
+    max_context = st.slider("Max Context Messages", 1, 20, config.get("max_context_messages", 2))
+
     starting_model = st.selectbox("Starting Model", ["model_a", "model_b"], key="starting_model")
     
     st.subheader("Conversation Setup")
@@ -106,8 +107,7 @@ with col1:
             temp = temp_a if starting_model == "model_a" else temp_b
             responses = st.session_state.conversation.start_conversation(
                 starting_prompt,
-                temperature=temp,
-                max_tokens=max_tokens
+                temperature=temp
             )
         st.success("Conversation started!")
 
@@ -117,7 +117,8 @@ with col2:
             temp = temp_a if st.session_state.conversation.current_turn == "model_a" else temp_b
             responses = st.session_state.conversation.continue_conversation(
                 temperature=temp,
-                max_tokens=max_tokens
+                max_tokens=max_tokens,
+                max_context=max_context
             )
         st.success("Response generated!")
 
