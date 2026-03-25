@@ -25,3 +25,14 @@ Change "vector_a" and/or "vector_b" to null if you do not have steering vectors.
 4. Click "Start Conversation"
 5. Click "Continue Conversation" after the first model responds and to continue the conversation after model turns
 6. "Clear History" to restart conversation
+
+# On CLI:
+This will allow you to generate conversations on the CLI in a streamlined fashion. 
+
+Create a folder called "cli_inputs" in the main directory. Add in text file for each question separately (i.e. question1.txt).
+
+Adjust he cli_config.yaml file similar to what is explained on the UI config and run the following command:
+```
+python cli_app.py
+```
+Outputs will be stored in a newly created folder with the name of the question file, runtime statistics, and conversation.
