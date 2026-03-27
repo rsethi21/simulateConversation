@@ -67,7 +67,6 @@ class ConversationManager:
                           max_tokens: int = 256) -> Dict[str, str]:
         """Start the conversation: Add user message and generate first response from starting model."""
         self.add_user_message(user_message)
-        
         if self.starting_model == "model_a":
             response = "".join(self.generate_response(self.model_a, temperature, max_tokens))
             self.history.append({"role": "model_a", "content": response})

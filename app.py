@@ -1,26 +1,69 @@
 import streamlit as st
 import yaml
 import tempfile
+import os # New: Import os for path operations
 from model_manager import ModelManager
 from llm_interface import LLMInterface
 from custom_steering_vectors import SteeringVectorManager, CustomSteeringVector
 from conversation_manager import ConversationManager
 
+# Helper function to compose the system prompt from role and knowledge base
+def compose_system_prompt(role_content, knowledge_base_content):
+    prompt_parts = []
+    if role_content:
+        prompt_parts.append(role_content.strip())
+    if knowledge_base_content:
+        prompt_parts.append("Knowledge Base:\n" + knowledge_base_content.strip())
+    return "\n\n".join(prompt_parts)
+
 # Load config
 with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
+# Ensure knowledge base directory exists
+knowledge_base_dir = config.get("knowledge_base_dir", "./knowledge_bases")
+if not os.path.exists(knowledge_base_dir):
+    os.makedirs(knowledge_base_dir)
+
 st.set_page_config(page_title="Dual LLM Conversation", layout="wide")
 st.title("🤖 Dual LLM Conversation with Steering Vectors")
 
-# Initialize managers
+# Initialize managers and session state for KB
 if "model_manager" not in st.session_state:
     st.session_state.model_manager = ModelManager(cache_dir=config["model_cache_dir"])
     st.session_state.vector_manager = SteeringVectorManager(vector_dir=config["vector_dir"], default_intensity=config["default_intensity"])
-    st.session_state.vector_manager.preload_vectors(config.get("vector_a"), config.get("vector_b"))  # Use .get() for safety
+    st.session_state.vector_manager.preload_vectors(config.get("vector_a"), config.get("vector_b"))
     st.session_state.conversation = None
     st.session_state.vector_a = st.session_state.vector_manager.get_vector('vector_a')
     st.session_state.vector_b = st.session_state.vector_manager.get_vector('vector_b')
+    st.session_state.knowledge_base_a_content = "" # New: Store KB content in session state
+    st.session_state.knowledge_base_b_content = "" # New: Store KB content in session state
+    st.session_state.knowledge_base_a_name = "None" # New: Store KB filename
+    st.session_state.knowledge_base_b_name = "None" # New: Store KB filename
+
+    # Load default knowledge base A if path is specified and no content yet
+    default_kb_a_path = config.get("default_knowledge_base_a_path")
+    if default_kb_a_path and not st.session_state.knowledge_base_a_content:
+        full_path_a = os.path.join(knowledge_base_dir, default_kb_a_path)
+        if os.path.exists(full_path_a):
+            try:
+                with open(full_path_a, "r", encoding="utf-8") as kb_file:
+                    st.session_state.knowledge_base_a_content = kb_file.read()
+                    st.session_state.knowledge_base_a_name = os.path.basename(full_path_a)
+            except Exception as e:
+                st.error(f"Error loading default knowledge base A from {full_path_a}: {e}")
+
+    # Load default knowledge base B if path is specified and no content yet
+    default_kb_b_path = config.get("default_knowledge_base_b_path")
+    if default_kb_b_path and not st.session_state.knowledge_base_b_content:
+        full_path_b = os.path.join(knowledge_base_dir, default_kb_b_path)
+        if os.path.exists(full_path_b):
+            try:
+                with open(full_path_b, "r", encoding="utf-8") as kb_file:
+                    st.session_state.knowledge_base_b_content = kb_file.read()
+                    st.session_state.knowledge_base_b_name = os.path.basename(full_path_b)
+            except Exception as e:
+                st.error(f"Error loading default knowledge base B from {full_path_b}: {e}")
 
 # Sidebar configuration
 with st.sidebar:
@@ -29,20 +72,69 @@ with st.sidebar:
     model_a = st.selectbox("Model A", config["available_models"], key="model_a_select")
     model_b = st.selectbox("Model B", config["available_models"], key="model_b_select")
     
-    st.subheader("Personalities")
-    personality_a = st.text_area("Model A Personality", value=config.get("default_personality_a", ""), placeholder="Enter personality prompt...", key="pers_a")
-    personality_b = st.text_area("Model B Personality", value=config.get("default_personality_b", ""), placeholder="Enter personality prompt...", key="pers_b")
+    st.subheader("Roles") # Changed: "Personalities" to "Roles"
+    # Changed: personality_a to role_a, default_personality_a to default_role_a, key="pers_a" to key="role_a"
+    role_a = st.text_area("Model A Role", value=config.get("default_role_a", ""), placeholder="Enter role prompt...", key="role_a")
+    # Changed: personality_b to role_b, default_personality_b to default_role_b, key="pers_b" to key="role_b"
+    role_b = st.text_area("Model B Role", value=config.get("default_role_b", ""), placeholder="Enter role prompt...", key="role_b")
 
-    col_pers_a, col_pers_b = st.columns(2)
-    with col_pers_a:
-        if st.button("Update Personality A") and st.session_state.conversation:
-            st.session_state.conversation.model_a.update_personality(personality_a)
-            st.success("Model A personality updated!")
-    with col_pers_b:
-        if st.button("Update Personality B") and st.session_state.conversation:
-            st.session_state.conversation.model_b.update_personality(personality_b)
-            st.success("Model B personality updated!")
+    col_role_a, col_role_b = st.columns(2) # Changed: col_pers_a to col_role_a
+    with col_role_a:
+        # Changed: "Update Personality A" to "Update Role A" and logic to update system prompt
+        if st.button("Update Role A") and st.session_state.conversation:
+            current_kb_content_a = st.session_state.knowledge_base_a_content
+            full_system_prompt_a = compose_system_prompt(role_a, current_kb_content_a)
+            # Assumed change in LLMInterface: update_personality -> set_personality
+            st.session_state.conversation.model_a.set_personality(full_system_prompt_a) 
+            st.success("Model A role updated!")
+    with col_role_b:
+        # Changed: "Update Personality B" to "Update Role B" and logic to update system prompt
+        if st.button("Update Role B") and st.session_state.conversation:
+            current_kb_content_b = st.session_state.knowledge_base_b_content
+            full_system_prompt_b = compose_system_prompt(role_b, current_kb_content_b)
+            # Assumed change in LLMInterface: update_personality -> set_personality
+            st.session_state.conversation.model_b.set_personality(full_system_prompt_b)
+            st.success("Model B role updated!")
     
+    st.subheader("Knowledge Bases") # New: Subheader for Knowledge Bases
+    
+    # New: File uploader and update button for Knowledge Base A
+    uploaded_file_a = st.file_uploader("Upload Knowledge Base A", type=["txt"], key="upload_kb_a")
+    if uploaded_file_a is not None:
+        string_data = uploaded_file_a.getvalue().decode("utf-8")
+        st.session_state.knowledge_base_a_content = string_data
+        st.session_state.knowledge_base_a_name = uploaded_file_a.name
+        st.success(f"Loaded Knowledge Base A: {uploaded_file_a.name}")
+    st.info(f"Current Knowledge Base A: {st.session_state.knowledge_base_a_name}")
+
+    if st.button("Update Knowledge Base A") and st.session_state.conversation:
+        # Get current role content from the UI widget
+        current_role_a_from_ui = st.session_state.get("role_a", "")
+        full_system_prompt_a = compose_system_prompt(current_role_a_from_ui, st.session_state.knowledge_base_a_content)
+        # Assumed change in LLMInterface: update_personality -> set_personality
+        st.session_state.conversation.model_a.set_personality(full_system_prompt_a)
+        st.success("Model A knowledge base updated!")
+
+    st.markdown("---") # Separator
+
+    # New: File uploader and update button for Knowledge Base B
+    uploaded_file_b = st.file_uploader("Upload Knowledge Base B", type=["txt"], key="upload_kb_b")
+    if uploaded_file_b is not None:
+        string_data = uploaded_file_b.getvalue().decode("utf-8")
+        st.session_state.knowledge_base_b_content = string_data
+        st.session_state.knowledge_base_b_name = uploaded_file_b.name
+        st.success(f"Loaded Knowledge Base B: {uploaded_file_b.name}")
+    st.info(f"Current Knowledge Base B: {st.session_state.knowledge_base_b_name}")
+
+    if st.button("Update Knowledge Base B") and st.session_state.conversation:
+        # Get current role content from the UI widget
+        current_role_b_from_ui = st.session_state.get("role_b", "")
+        full_system_prompt_b = compose_system_prompt(current_role_b_from_ui, st.session_state.knowledge_base_b_content)
+        # Assumed change in LLMInterface: update_personality -> set_personality
+        st.session_state.conversation.model_b.set_personality(full_system_prompt_b)
+        st.success("Model B knowledge base updated!")
+
+
     st.subheader("Names")
     name_a = st.text_input("Model A Name", value=config.get("default_name_a", "Model A"), key="name_a")
     name_b = st.text_input("Model B Name", value=config.get("default_name_b", "Model B"), key="name_b")
@@ -82,11 +174,15 @@ with st.sidebar:
         llm_a.set_decay_rate(decay_rate)
         llm_b.set_decay_rate(decay_rate)
         
-        # Set personalities
-        if personality_a:
-            llm_a.set_personality(personality_a)
-        if personality_b:
-            llm_b.set_personality(personality_b)
+        # New: Compose full system prompts for initialization
+        full_system_prompt_a = compose_system_prompt(role_a, st.session_state.knowledge_base_a_content)
+        full_system_prompt_b = compose_system_prompt(role_b, st.session_state.knowledge_base_b_content)
+
+        # Assumed change in LLMInterface: set_personality -> set_system_prompt
+        if full_system_prompt_a:
+            llm_a.set_personality(full_system_prompt_a)
+        if full_system_prompt_b:
+            llm_b.set_personality(full_system_prompt_b)
         
         # Set preloaded steering vectors only if available
         if st.session_state.vector_a:

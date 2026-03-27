@@ -109,7 +109,6 @@ class LLMInterface:
                  top_k: int = 50, max_tokens: int = 256) -> str:
         """Generate a response with optional steering applied via registered hooks."""
         full_prompt = self._format_prompt(prompt)
-        
         inputs = self.tokenizer(full_prompt, return_tensors="pt").to(self.model.device)
         self.token_index = 0  # Reset decay tracking
         

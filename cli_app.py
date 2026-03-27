@@ -9,6 +9,15 @@ from llm_interface import LLMInterface
 from custom_steering_vectors import SteeringVectorManager
 from conversation_manager import ConversationManager
 
+# Helper function to compose the system prompt from role and knowledge base
+def compose_system_prompt(role_content, knowledge_base_content):
+    prompt_parts = []
+    if role_content:
+        prompt_parts.append(role_content.strip())
+    if knowledge_base_content:
+        prompt_parts.append("Knowledge Base:\n" + knowledge_base_content.strip())
+    return "\n\n".join(prompt_parts)
+
 def load_config(config_path="cli_config.yaml"):
     """Loads configuration from cli_config.yaml."""
     try:
@@ -36,9 +45,37 @@ def run_cli_conversation():
     cli_max_turns = config.get("cli_max_turns", 5)
     cli_output_folder = config.get("cli_output_folder", "./cli_conversations")
     cli_starting_model = config.get("cli_starting_model", "model_a")
+    knowledge_base_dir = config.get("knowledge_base_dir", "./knowledge_bases")
+    default_kb_a_path = config.get("default_knowledge_base_a_path")
+    default_kb_b_path = config.get("default_knowledge_base_b_path")
+
+    if default_kb_a_path != None:
+        full_path_a = os.path.join(knowledge_base_dir, default_kb_a_path)
+        if os.path.exists(full_path_a):
+            with open(full_path_a, "r", encoding="utf-8") as kb_file:
+                knowledge_base_a_content = kb_file.read()
+        else:
+            knowledge_base_a_content = None
+    else:
+        knowledge_base_a_content = None
     
+    if default_kb_b_path != None:
+        full_path_b = os.path.join(knowledge_base_dir, default_kb_b_path)
+        if os.path.exists(full_path_b):
+            with open(full_path_b, "r", encoding="utf-8") as kb_file:
+                knowledge_base_b_content = kb_file.read()
+        else:
+            knowledge_base_b_content = None
+    else:
+        knowledge_base_b_content = None
+
     # Ensure output folder exists
     os.makedirs(cli_output_folder, exist_ok=True)
+    # Ensure knowledge base directory exists
+    knowledge_base_dir = config.get("knowledge_base_dir", "./knowledge_bases")
+    if not os.path.exists(knowledge_base_dir):
+        os.makedirs(knowledge_base_dir)
+
 
     # Initialize shared managers once
     model_manager = ModelManager(cache_dir=config["model_cache_dir"])
@@ -68,12 +105,14 @@ def run_cli_conversation():
     llm_b.set_decay_rate(decay_rate)
 
     # Set personalities
-    personality_a = config.get("default_personality_a", "")
-    personality_b = config.get("default_personality_b", "")
-    if personality_a:
-        llm_a.set_personality(personality_a)
-    if personality_b:
-        llm_b.set_personality(personality_b)
+    role_a = config.get("default_role_a", "")
+    role_b = config.get("default_role_b", "")
+    if role_a:
+        full_system_prompt_a = compose_system_prompt(role_a, knowledge_base_a_content)
+        llm_a.set_personality(full_system_prompt_a)
+    if role_b:
+        full_system_prompt_b = compose_system_prompt(role_b, knowledge_base_b_content)
+        llm_b.set_personality(full_system_prompt_b)
 
     # Set preloaded steering vectors and initial intensity
     vector_a_obj = vector_manager.get_vector('vector_a')
