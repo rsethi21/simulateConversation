@@ -3,12 +3,14 @@ from llm_interface import LLMInterface
 import torch
 
 class ConversationManager:
-    def __init__(self, model_a: LLMInterface, model_b: LLMInterface, starting_model: str = "model_a"):
+    def __init__(self, model_a: LLMInterface, model_b: LLMInterface, starting_model: str = "model_a", knowledge_base_a: Optional[str] = "None", knowledge_base_b: Optional[str] = "None"):
         self.model_a = model_a
         self.model_b = model_b
         self.starting_model = starting_model  # "model_a" or "model_b"
         self.history: List[Dict[str, str]] = []
         self.current_turn = starting_model  # Tracks whose turn it is next
+        self.knowledge_base_a = knowledge_base_a  # Optional: Can be set externally if needed for context
+        self.knowledge_base_b = knowledge_base_b  # Optional: Can be set externally if needed for context
     
     def add_user_message(self, message: str):
         """Add a user message to the conversation."""
@@ -56,6 +58,11 @@ class ConversationManager:
             user_prompt = self.get_context(max_messages=max_context) or self.get_context(max_messages=max_context) or ""
         else:
             user_prompt = self.get_context(max_messages=max_context) or self.get_context(max_context) or ""
+
+        if model is self.model_a:
+            user_prompt = f"Knowledge Base:\n{self.knowledge_base_a}\n---------------------\nLast two messages (if any):\n{user_prompt}"
+        else:
+            user_prompt = f"Knowledge Base:\n{self.knowledge_base_b}\n---------------------\nLast two messages (if any):\n{user_prompt}"
 
         if model.steering_vector:
             response = model.generate_stream(user_prompt, temperature=temperature, max_tokens=max_tokens)

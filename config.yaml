@@ -19,8 +19,8 @@ vector_a: null
 vector_b: null
 
 # Default Roles (one for each model, displayed in UI text boxes)
-default_role_a: "Role play as a physician answering a patient's questions. You must act only as a physician and respond to the patient's queries. Engage in a natural conversation. Do not write a response for the patient, only respond to the patient's questions and details. Your answers should be grounded using the knowledge base provided."
-default_role_b: "Role play as a patient asking your physician questions. You must act only as a patient and ask the physician questions/share details the physician asks. Engage in a natural conversation. Dot not write a response for the physician, only ask questions and share details with the physician."
+default_role_a: "Role play as a physician answering a patient's questions. You must act only as a physician and respond to the patient's queries. Engage in a natural conversation. Do not write a response for the patient, only respond to the patient's questions and details. This is IMPORTANT, your answers must be grounded using the knowledge base provided under the tag 'Knowledge Base' if provided. If no knowledge base is provided, answer based on your general knowledge and reasoning abilities."
+default_role_b: "Role play as a patient asking your physician questions. You must act only as a patient and ask the physician questions/share details the physician asks. Engage in a natural conversation. Dot not write a response for the physician, only ask questions and share details with the physician. This is IMPORTANT, your answers must be grounded using the knowledge base provided under the tag 'Knowledge Base' if provided. If no knowledge base is provided, answer based on your general knowledge and reasoning abilities."
 
 
 # Role names
@@ -28,7 +28,7 @@ default_name_a: "Physician"
 default_name_b: "Patient"
 
 # Default Knowledge Bases (text files, relative to knowledge_base_dir)
-default_knowledge_base_a_path: null # e.g., "physician_knowledge.txt"
+default_knowledge_base_a_path: "test.txt" # e.g., "physician_knowledge.txt"
 default_knowledge_base_b_path: null # e.g., "patient_knowledge.txt"
 
 # UI Preferences

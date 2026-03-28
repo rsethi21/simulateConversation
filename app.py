@@ -52,6 +52,12 @@ if "model_manager" not in st.session_state:
                     st.session_state.knowledge_base_a_name = os.path.basename(full_path_a)
             except Exception as e:
                 st.error(f"Error loading default knowledge base A from {full_path_a}: {e}")
+        else:
+            st.session_state.knowledge_base_a_content = None
+            st.session_state.knowledge_base_a_name = "None"
+    else:
+        st.session_state.knowledge_base_a_content = None
+        st.session_state.knowledge_base_a_name = "None"
 
     # Load default knowledge base B if path is specified and no content yet
     default_kb_b_path = config.get("default_knowledge_base_b_path")
@@ -64,7 +70,12 @@ if "model_manager" not in st.session_state:
                     st.session_state.knowledge_base_b_name = os.path.basename(full_path_b)
             except Exception as e:
                 st.error(f"Error loading default knowledge base B from {full_path_b}: {e}")
-
+        else:
+            st.session_state.knowledge_base_b_content = None
+            st.session_state.knowledge_base_b_name = "None"
+    else:
+        st.session_state.knowledge_base_b_content = None
+        st.session_state.knowledge_base_b_name = "None"
 # Sidebar configuration
 with st.sidebar:
     st.header("⚙️ Configuration")
@@ -83,7 +94,7 @@ with st.sidebar:
         # Changed: "Update Personality A" to "Update Role A" and logic to update system prompt
         if st.button("Update Role A") and st.session_state.conversation:
             current_kb_content_a = st.session_state.knowledge_base_a_content
-            full_system_prompt_a = compose_system_prompt(role_a, current_kb_content_a)
+            full_system_prompt_a = compose_system_prompt(role_a, None)
             # Assumed change in LLMInterface: update_personality -> set_personality
             st.session_state.conversation.model_a.set_personality(full_system_prompt_a) 
             st.success("Model A role updated!")
@@ -91,9 +102,9 @@ with st.sidebar:
         # Changed: "Update Personality B" to "Update Role B" and logic to update system prompt
         if st.button("Update Role B") and st.session_state.conversation:
             current_kb_content_b = st.session_state.knowledge_base_b_content
-            full_system_prompt_b = compose_system_prompt(role_b, current_kb_content_b)
+            full_system_prompt_b = compose_system_prompt(role_b, None)
             # Assumed change in LLMInterface: update_personality -> set_personality
-            st.session_state.conversation.model_b.set_personality(full_system_prompt_b)
+            st.session_state.conversation.model_b.set_personality(None)
             st.success("Model B role updated!")
     
     st.subheader("Knowledge Bases") # New: Subheader for Knowledge Bases
@@ -110,7 +121,7 @@ with st.sidebar:
     if st.button("Update Knowledge Base A") and st.session_state.conversation:
         # Get current role content from the UI widget
         current_role_a_from_ui = st.session_state.get("role_a", "")
-        full_system_prompt_a = compose_system_prompt(current_role_a_from_ui, st.session_state.knowledge_base_a_content)
+        full_system_prompt_a = compose_system_prompt(current_role_a_from_ui, None)
         # Assumed change in LLMInterface: update_personality -> set_personality
         st.session_state.conversation.model_a.set_personality(full_system_prompt_a)
         st.success("Model A knowledge base updated!")
@@ -129,7 +140,7 @@ with st.sidebar:
     if st.button("Update Knowledge Base B") and st.session_state.conversation:
         # Get current role content from the UI widget
         current_role_b_from_ui = st.session_state.get("role_b", "")
-        full_system_prompt_b = compose_system_prompt(current_role_b_from_ui, st.session_state.knowledge_base_b_content)
+        full_system_prompt_b = compose_system_prompt(current_role_b_from_ui, None)
         # Assumed change in LLMInterface: update_personality -> set_personality
         st.session_state.conversation.model_b.set_personality(full_system_prompt_b)
         st.success("Model B knowledge base updated!")
@@ -175,8 +186,8 @@ with st.sidebar:
         llm_b.set_decay_rate(decay_rate)
         
         # New: Compose full system prompts for initialization
-        full_system_prompt_a = compose_system_prompt(role_a, st.session_state.knowledge_base_a_content)
-        full_system_prompt_b = compose_system_prompt(role_b, st.session_state.knowledge_base_b_content)
+        full_system_prompt_a = compose_system_prompt(role_a, None)
+        full_system_prompt_b = compose_system_prompt(role_b, None)
 
         # Assumed change in LLMInterface: set_personality -> set_system_prompt
         if full_system_prompt_a:
@@ -191,7 +202,7 @@ with st.sidebar:
         if st.session_state.vector_b:
             llm_b.set_steering_vector(st.session_state.vector_b)
             llm_b.update_steering_intensity(intensity_b)  # Set initial intensity from slider
-        st.session_state.conversation = ConversationManager(llm_a, llm_b, starting_model)
+        st.session_state.conversation = ConversationManager(llm_a, llm_b, starting_model, knowledge_base_a=st.session_state.knowledge_base_a_content, knowledge_base_b=st.session_state.knowledge_base_b_content)
         st.success("Models initialized! (Steering vectors applied only where configured)")
 
 # Main conversation area

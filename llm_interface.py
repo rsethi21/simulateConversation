@@ -111,7 +111,6 @@ class LLMInterface:
         full_prompt = self._format_prompt(prompt)
         inputs = self.tokenizer(full_prompt, return_tensors="pt").to(self.model.device)
         self.token_index = 0  # Reset decay tracking
-        
         # Hooks are automatically invoked during forward pass within generate()
         with torch.no_grad():
             outputs = self.model.generate(

@@ -108,10 +108,10 @@ def run_cli_conversation():
     role_a = config.get("default_role_a", "")
     role_b = config.get("default_role_b", "")
     if role_a:
-        full_system_prompt_a = compose_system_prompt(role_a, knowledge_base_a_content)
+        full_system_prompt_a = compose_system_prompt(role_a, None)
         llm_a.set_personality(full_system_prompt_a)
     if role_b:
-        full_system_prompt_b = compose_system_prompt(role_b, knowledge_base_b_content)
+        full_system_prompt_b = compose_system_prompt(role_b, None)
         llm_b.set_personality(full_system_prompt_b)
 
     # Set preloaded steering vectors and initial intensity
@@ -146,7 +146,7 @@ def run_cli_conversation():
         start_time = time.time()
 
         # Re-initialize ConversationManager for each new conversation
-        conversation_manager = ConversationManager(llm_a, llm_b, cli_starting_model)
+        conversation_manager = ConversationManager(llm_a, llm_b, cli_starting_model, knowledge_base_a=knowledge_base_a_content, knowledge_base_b=knowledge_base_b_content)
         conversation_history = []
 
         # The initial user prompt is technically from the "user" role, but for CLI output, we can attribute it
