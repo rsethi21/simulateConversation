@@ -16,6 +16,8 @@ class CustomSteeringVector:
     def load_from_pt(file_path: str) -> "CustomSteeringVector":
         """Load steering vector from PyTorch .pt file with multi-layer activations."""
         data = torch.load(file_path, map_location='cpu', weights_only=False)  # Load on CPU to avoid device issues
+        data = CustomSteeringVector(data)
+        data = {str(layer): vector for layer, vector in data.layer_activations.items()}  # Ensure keys are strings
         return CustomSteeringVector(data)
 
         layer_activations = {}
@@ -27,7 +29,7 @@ class CustomSteeringVector:
     def save_to_pt(self, file_path: str):
         """Save steering vector to PyTorch .pt file."""
         data = {
-            'layer_activations': {layer: torch.from_numpy(vector) for layer, vector in self.layer_activations.items()}
+            'layer_activations': {str(layer): torch.from_numpy(vector) for layer, vector in self.layer_activations.items()}
         }  # No intensity saved
         torch.save(data, file_path)
     
