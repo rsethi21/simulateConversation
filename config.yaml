@@ -17,7 +17,7 @@ default_num_beams: 1 # New: Default number of beams for generation
 default_length_penalty: 1.0 # New: Default length penalty for generation
 
 # Preloaded Steering Vectors (PyTorch .pt files)
-vector_a: null
+vector_a: "./vectors/vector_a.pt" # Example path to a steering vector for model_a
 vector_b: null
 
 # Default Roles (one for each model, displayed in UI text boxes)
@@ -30,7 +30,7 @@ default_name_a: "Physician"
 default_name_b: "Patient"
 
 # Default Knowledge Bases (text files, relative to knowledge_base_dir)
-default_knowledge_base_a_path: "test.txt" # e.g., "physician_knowledge.txt"
+default_knowledge_base_a_path: null # e.g., "physician_knowledge.txt"
 default_knowledge_base_b_path: null # e.g., "patient_knowledge.txt"
 
 # UI Preferences

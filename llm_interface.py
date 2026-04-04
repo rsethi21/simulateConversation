@@ -4,6 +4,7 @@ from model_manager import ModelManager
 from custom_steering_vectors import CustomSteeringVector
 import torch
 from steering_vectors import SteeringVector
+import numpy as np
 
 class LLMInterface:
     def __init__(self, model_name: str, model_display_name: str, manager: ModelManager):
@@ -66,22 +67,32 @@ class LLMInterface:
                 if name in named_modules.keys():
                     module = named_modules.get(name)
                     if module is not None:
-                        def steering_hook_factory(layer_name, steering_tensor):
+                        def steering_hook_factory(layer_name, steering_vector_data):
+                            # Ensure steering_vector_data is a torch.Tensor and move to device
+                            # This tensor will be kept in memory with its original dtype (likely float32 if loaded from numpy)
+                            if isinstance(steering_vector_data, np.ndarray):
+                                base_steering_tensor = torch.from_numpy(steering_vector_data).to(self.device)
+                            else:
+                                base_steering_tensor = steering_vector_data.to(self.device)
+
                             def steering_hook(module, input, output):
                                 # The steering vector apply method often expects an output tuple
                                 # if it's a multi-output module, but generally just modifies the tensor.
                                 # Ensure output is a tensor or the first element of a tuple.
                                 original_output_tensor = output[0] if isinstance(output, tuple) else output
                                 
+                                # Get the dtype of the model's activation
+                                target_dtype = original_output_tensor.dtype
+                                
                                 decay_factor = self._calculate_decay(self.token_index)
                                 adjusted_intensity = self.steering_vector.intensity * decay_factor
                                 
-                                # Ensure steering_tensor has the correct shape for broadcasting or addition
-                                # You might need to expand dimensions of steering_tensor if it's 1D
-                                # or reshape it to match original_output_tensor.shape[1:] if it's per-batch.
+                                # Cast the base_steering_tensor to the target_dtype before addition
+                                # This ensures dtype consistency with the model's activations
+                                steering_tensor_on_device_and_dtype = base_steering_tensor.to(target_dtype)
                                 
-                                # Simple addition, assuming shapes are compatible
-                                steered_output = original_output_tensor + adjusted_intensity * steering_tensor.to(self.device)
+                                # Perform the addition directly on tensors, maintaining dtype
+                                steered_output = original_output_tensor + adjusted_intensity * steering_tensor_on_device_and_dtype
                                 
                                 if isinstance(output, tuple):
                                     return (steered_output,) + output[1:]

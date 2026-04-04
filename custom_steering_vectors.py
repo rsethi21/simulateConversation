@@ -8,7 +8,7 @@ from steering_vectors import SteeringVector  # Import the base class for type hi
 
 class CustomSteeringVector:
     def __init__(self, vector: SteeringVector, intensity: float = 1.0):
-        self.vector = vector
+        self.layer_activations = vector
         self.intensity = intensity
         self.device = 0
     
@@ -16,8 +16,7 @@ class CustomSteeringVector:
     def load_from_pt(file_path: str) -> "CustomSteeringVector":
         """Load steering vector from PyTorch .pt file with multi-layer activations."""
         data = torch.load(file_path, map_location='cpu', weights_only=False)  # Load on CPU to avoid device issues
-        data = CustomSteeringVector(data)
-        data = {str(layer): vector for layer, vector in data.layer_activations.items()}  # Ensure keys are strings
+        data = {str(layer): vector.float().numpy() for layer, vector in data.layer_activations.items()}  # Ensure keys are strings
         return CustomSteeringVector(data)
 
         layer_activations = {}
