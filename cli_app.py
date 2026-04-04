@@ -89,6 +89,8 @@ def run_cli_conversation():
     max_tokens = config.get("max_tokens", 256)
     decay_rate = config.get("decay_rate", 0.95)
     max_context = config.get("max_context_messages", 2)
+    num_beams = config.get("default_num_beams", 1) # New
+    length_penalty = config.get("default_length_penalty", 1.0) # New
 
     # Load display names for models
     display_name_a = config.get("default_name_a", "Model A")
@@ -162,7 +164,9 @@ def run_cli_conversation():
             responses_dict = conversation_manager.start_conversation(
                 starting_prompt,
                 temperature=current_temp,
-                max_tokens=max_tokens
+                max_tokens=max_tokens,
+                num_beams=num_beams, # New
+                length_penalty=length_penalty # New
             )
             for model_key, content in responses_dict.items():
                 display_name = llm_a.model_display_name if model_key == "model_a" else llm_b.model_display_name
@@ -181,7 +185,9 @@ def run_cli_conversation():
                 responses_dict = conversation_manager.continue_conversation(
                     temperature=current_temp,
                     max_tokens=max_tokens,
-                    max_context=max_context
+                    max_context=max_context,
+                    num_beams=num_beams, # New
+                    length_penalty=length_penalty # New
                 )
                 for model_key, content in responses_dict.items():
                     display_name = llm_a.model_display_name if model_key == "model_a" else llm_b.model_display_name

@@ -13,6 +13,8 @@ default_top_k: 50
 max_tokens: 256
 default_intensity: 0.05
 max_context_messages: 2
+default_num_beams: 1 # New: Default number of beams for generation
+default_length_penalty: 1.0 # New: Default length penalty for generation
 
 # Preloaded Steering Vectors (PyTorch .pt files)
 vector_a: null

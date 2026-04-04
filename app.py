@@ -172,6 +172,8 @@ with st.sidebar:
     top_k = st.slider("Top-K", 1, 100, 50, key="top_k")
     max_tokens = st.slider("Max Tokens", 50, 500, 256)
     max_context = st.slider("Max Context Messages", 1, 20, config.get("max_context_messages", 2))
+    num_beams = st.slider("Number of Beams", 1, 10, config.get("default_num_beams", 1), key="num_beams") # New
+    length_penalty = st.slider("Length Penalty", 0.0, 5.0, config.get("default_length_penalty", 1.0), step=0.1, key="length_penalty") # New
 
     starting_model = st.selectbox("Starting Model", ["model_a", "model_b"], key="starting_model")
     
@@ -211,21 +213,25 @@ col1, col2, col3 = st.columns(3)
 with col1:
     if st.button("Start Conversation") and starting_prompt and st.session_state.conversation and not st.session_state.conversation.is_conversation_started():
         with st.spinner("Generating first response..."):
-            temp = temp_a if starting_model == "model_a" else temp_b
-            responses = st.session_state.conversation.start_conversation(
+            st.session_state.conversation.start_conversation(
                 starting_prompt,
-                temperature=temp
+                temperature=temp_a if st.session_state.conversation.starting_model == "model_a" else temp_b,
+                max_tokens=max_tokens,
+                num_beams=num_beams, # New
+                length_penalty=length_penalty # New
             )
         st.success("Conversation started!")
 
 with col2:
     if st.button("Continue Conversation") and st.session_state.conversation and st.session_state.conversation.is_conversation_started():
         with st.spinner("Generating next response..."):
-            temp = temp_a if st.session_state.conversation.current_turn == "model_a" else temp_b
-            responses = st.session_state.conversation.continue_conversation(
-                temperature=temp,
+            current_temp = temp_a if st.session_state.conversation.current_turn == "model_a" else temp_b
+            st.session_state.conversation.continue_conversation(
+                temperature=current_temp,
                 max_tokens=max_tokens,
-                max_context=max_context
+                max_context=max_context,
+                num_beams=num_beams, # New
+                length_penalty=length_penalty # New
             )
         st.success("Response generated!")
 

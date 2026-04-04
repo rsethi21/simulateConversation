@@ -52,7 +52,8 @@ class ConversationManager:
         return None
     
     def generate_response(self, model: LLMInterface, temperature: float = 0.7,
-                         max_tokens: int = 256, max_context: int = 5) -> str:
+                         max_tokens: int = 256, max_context: int = 5,
+                         num_beams: int = 1, length_penalty: float = 1.0) -> str:
         """Generate a response from the specified model using only the other side’s last message."""
         if model is self.model_a:
             user_prompt = self.get_context(max_messages=max_context) or self.get_context(max_messages=max_context) or ""
@@ -65,35 +66,42 @@ class ConversationManager:
             user_prompt = f"Knowledge Base:\n{self.knowledge_base_b}\n---------------------\nLast two messages (if any):\n{user_prompt}"
 
         if model.steering_vector:
-            response = model.generate_stream(user_prompt, temperature=temperature, max_tokens=max_tokens)
+            response = model.generate_stream(user_prompt, temperature=temperature, max_tokens=max_tokens,
+                                             num_beams=num_beams, length_penalty=length_penalty) # Pass num_beams, length_penalty
         else:
-            response = model.generate(user_prompt, temperature=temperature, max_tokens=max_tokens)
+            response = model.generate(user_prompt, temperature=temperature, max_tokens=max_tokens,
+                                      num_beams=num_beams, length_penalty=length_penalty) # Pass num_beams, length_penalty
         return response
     
     def start_conversation(self, user_message: str, temperature: float = 0.7,
-                          max_tokens: int = 256) -> Dict[str, str]:
+                          max_tokens: int = 256, num_beams: int = 1, length_penalty: float = 1.0) -> Dict[str, str]:
         """Start the conversation: Add user message and generate first response from starting model."""
         self.add_user_message(user_message)
         if self.starting_model == "model_a":
-            response = "".join(self.generate_response(self.model_a, temperature, max_tokens))
+            response = "".join(self.generate_response(self.model_a, temperature, max_tokens,
+                                                      num_beams=num_beams, length_penalty=length_penalty)) # Pass num_beams, length_penalty
             self.history.append({"role": "model_a", "content": response})
             self.current_turn = "model_b"  # Next turn is Model B
         else:
-            response = self.generate_response(self.model_b, temperature, max_tokens)
+            response = self.generate_response(self.model_b, temperature, max_tokens,
+                                              num_beams=num_beams, length_penalty=length_penalty) # Pass num_beams, length_penalty
             self.history.append({"role": "model_b", "content": response})
             self.current_turn = "model_a"  # Next turn is Model A
         
         return {self.starting_model: response}
     
-    def continue_conversation(self, temperature: float = 0.7, max_tokens: int = 256, max_context: int = 5) -> Dict[str, str]:
+    def continue_conversation(self, temperature: float = 0.7, max_tokens: int = 256, max_context: int = 5,
+                              num_beams: int = 1, length_penalty: float = 1.0) -> Dict[str, str]:
         """Continue the conversation: Generate the next response from the current turn's model."""
         if self.current_turn == "model_a":
-            response = self.generate_response(self.model_a, temperature, max_tokens, max_context)
+            response = self.generate_response(self.model_a, temperature, max_tokens, max_context,
+                                              num_beams=num_beams, length_penalty=length_penalty) # Pass num_beams, length_penalty
             self.history.append({"role": "model_a", "content": response})
             self.current_turn = "model_b"
             return {"model_a": response}
         else:
-            response = self.generate_response(self.model_b, temperature, max_tokens, max_context)
+            response = self.generate_response(self.model_b, temperature, max_tokens, max_context,
+                                              num_beams=num_beams, length_penalty=length_penalty) # Pass num_beams, length_penalty
             self.history.append({"role": "model_b", "content": response})
             self.current_turn = "model_a"
             return {"model_b": response}
