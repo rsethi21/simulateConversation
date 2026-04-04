@@ -66,8 +66,7 @@ class ConversationManager:
             user_prompt = f"Knowledge Base:\n{self.knowledge_base_b}\n---------------------\nLast two messages (if any):\n{user_prompt}"
 
         if model.steering_vector:
-            response = model.generate_stream(user_prompt, temperature=temperature, max_tokens=max_tokens,
-                                             num_beams=num_beams, length_penalty=length_penalty) # Pass num_beams, length_penalty
+            response = model.generate_stream(user_prompt, temperature=temperature, max_tokens=max_tokens) # Pass num_beams, length_penalty
         else:
             response = model.generate(user_prompt, temperature=temperature, max_tokens=max_tokens,
                                       num_beams=num_beams, length_penalty=length_penalty) # Pass num_beams, length_penalty

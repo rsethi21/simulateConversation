@@ -131,7 +131,8 @@ class LLMInterface:
             return prompt
     
     def generate(self, prompt: str, temperature: float = 0.7, 
-                 top_k: int = 50, max_tokens: int = 256) -> str:
+                 top_k: int = 50, max_tokens: int = 256, 
+                 num_beams: int = 1, length_penalty: float = 1.0) -> str:
         """Generate a response with optional steering applied via registered hooks."""
         full_prompt = self._format_prompt(prompt)
         inputs = self.tokenizer(full_prompt, return_tensors="pt").to(self.model.device)
@@ -144,7 +145,9 @@ class LLMInterface:
                 temperature=temperature,
                 top_k=top_k,
                 do_sample=True,
-                pad_token_id=self.tokenizer.eos_token_id
+                pad_token_id=self.tokenizer.eos_token_id,
+                num_beams=num_beams,         # New parameter
+                length_penalty=length_penalty # New parameter
             )
             self.token_index += max_tokens  # Update after generation
         
