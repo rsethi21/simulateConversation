@@ -87,7 +87,7 @@ def run_cli_conversation():
     temp_b = config.get("default_temperature", 0.7)
     top_k = config.get("default_top_k", 50)
     max_tokens = config.get("max_tokens", 256)
-    decay_rate = config.get("decay_rate", 0.95)
+    decay_rate = config.get("default_decay_rate", 1.0)
     max_context = config.get("max_context_messages", 2)
     num_beams = config.get("default_num_beams", 1) # New
     length_penalty = config.get("default_length_penalty", 1.0) # New

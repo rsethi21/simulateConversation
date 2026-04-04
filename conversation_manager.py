@@ -82,8 +82,8 @@ class ConversationManager:
             self.history.append({"role": "model_a", "content": response})
             self.current_turn = "model_b"  # Next turn is Model B
         else:
-            response = self.generate_response(self.model_b, temperature, max_tokens,
-                                              num_beams=num_beams, length_penalty=length_penalty) # Pass num_beams, length_penalty
+            response = "".join(self.generate_response(self.model_b, temperature, max_tokens,
+                                                      num_beams=num_beams, length_penalty=length_penalty)) # Pass num_beams, length_penalty
             self.history.append({"role": "model_b", "content": response})
             self.current_turn = "model_a"  # Next turn is Model A
         
@@ -93,14 +93,14 @@ class ConversationManager:
                               num_beams: int = 1, length_penalty: float = 1.0) -> Dict[str, str]:
         """Continue the conversation: Generate the next response from the current turn's model."""
         if self.current_turn == "model_a":
-            response = self.generate_response(self.model_a, temperature, max_tokens, max_context,
-                                              num_beams=num_beams, length_penalty=length_penalty) # Pass num_beams, length_penalty
+            response = "".join(self.generate_response(self.model_a, temperature, max_tokens, max_context,
+                                              num_beams=num_beams, length_penalty=length_penalty)) # Pass num_beams, length_penalty
             self.history.append({"role": "model_a", "content": response})
             self.current_turn = "model_b"
             return {"model_a": response}
         else:
-            response = self.generate_response(self.model_b, temperature, max_tokens, max_context,
-                                              num_beams=num_beams, length_penalty=length_penalty) # Pass num_beams, length_penalty
+            response = "".join(self.generate_response(self.model_b, temperature, max_tokens, max_context,
+                                              num_beams=num_beams, length_penalty=length_penalty)) # Pass num_beams, length_penalty
             self.history.append({"role": "model_b", "content": response})
             self.current_turn = "model_a"
             return {"model_b": response}

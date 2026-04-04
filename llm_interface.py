@@ -63,7 +63,7 @@ class LLMInterface:
             # If keys are already module names, we can use them directly
             named_modules = dict(self.model.named_modules())
             for index, vector in self.steering_vector.layer_activations.items():
-                name = f"model.layers.{index}"
+                name = f"model.layers.{index}.post_attention_layernorm"
                 if name in named_modules.keys():
                     module = named_modules.get(name)
                     if module is not None:
@@ -170,32 +170,41 @@ class LLMInterface:
         """Stream tokens one at a time with decay applied via registered hooks."""
         full_prompt = self._format_prompt(prompt)
         inputs = self.tokenizer(full_prompt, return_tensors="pt").to(self.model.device)
-        input_ids = inputs["input_ids"]
-        attention_mask = inputs["attention_mask"]
-        input_len = input_ids.shape[1]
         
-        self.token_index = 0  # Reset decay tracking for generated tokens
+        input_ids = inputs["input_ids"]
+        # `current_attention_mask` will track the full attention mask for the entire sequence
+        current_attention_mask = inputs["attention_mask"] 
+        
+        self.token_index = 0  # Reset decay tracking for generated tokens (relative to generated tokens)
 
+        generated_ids = input_ids # This will accumulate prompt tokens + generated tokens
+        past_key_values = None
+        
         with torch.no_grad():
-            past_key_values = None
-            generated_tokens_count = 0
-            
-            while generated_tokens_count < max_tokens:
-                if past_key_values:
-                    # For subsequent tokens, only pass the last generated token
-                    current_input_ids = input_ids[:, -1].unsqueeze(-1)
-                    current_attention_mask = torch.ones(current_input_ids.shape, dtype=torch.long, device=self.device)
+            for i in range(max_tokens):
+                # Prepare inputs for the model call
+                if past_key_values is None:
+                    # First call: pass the full prompt input_ids and its attention_mask
+                    model_inputs_for_call = {
+                        "input_ids": generated_ids,
+                        "attention_mask": current_attention_mask,
+                    }
                 else:
-                    # For the first token, pass the full prompt
-                    current_input_ids = input_ids
-                    current_attention_mask = attention_mask
+                    # Subsequent calls: pass only the most recently generated token
+                    # The attention_mask needs to be extended by one for the new token
+                    # and the past_key_values from the previous step are used.
+                    new_attention_mask = torch.cat([current_attention_mask, 
+                                                    torch.ones((1, 1), dtype=torch.long, device=self.device)], dim=-1)
+                    model_inputs_for_call = {
+                        "input_ids": generated_ids[:, -1].unsqueeze(-1), # Only the last token
+                        "attention_mask": new_attention_mask,
+                        "past_key_values": past_key_values,
+                    }
+                    # Update `current_attention_mask` for the next iteration to include the new token
+                    current_attention_mask = new_attention_mask
 
-                outputs = self.model(
-                    input_ids=current_input_ids,
-                    attention_mask=current_attention_mask,
-                    past_key_values=past_key_values,
-                    use_cache=True,
-                )
+                # Make the model call using the prepared `model_inputs_for_call`
+                outputs = self.model(**model_inputs_for_call, use_cache=True)
                 
                 logits = outputs.logits[:, -1, :] # Get logits for the last token
                 past_key_values = outputs.past_key_values
@@ -208,30 +217,29 @@ class LLMInterface:
                     
                 # Apply top_k sampling
                 if top_k > 0:
+                    # Set all logits below the top_k threshold to -inf
                     top_k_values, top_k_indices = torch.topk(next_token_logits, top_k)
-                    next_token_logits = torch.full_like(next_token_logits, float('-inf'))
+                    next_token_logits = torch.full_like(next_token_logits, float('-inf'), device=self.device)
                     next_token_logits.scatter_(1, top_k_indices, top_k_values)
                 
                 probs = torch.softmax(next_token_logits, dim=-1)
                 next_token = torch.multinomial(probs, num_samples=1)
                 
-                # If it's the first token, combine with prompt for next iteration's attention mask
-                if generated_tokens_count == 0:
-                    input_ids = torch.cat([input_ids, next_token], dim=-1)
-                    attention_mask = torch.cat([attention_mask, current_attention_mask], dim=-1)
-                else:
-                    input_ids = torch.cat([input_ids, next_token], dim=-1)
-                
                 # Check for EOS token
                 if next_token.item() == self.tokenizer.eos_token_id:
                     break
 
-                token_str = self.tokenizer.decode(next_token[0], skip_special_tokens=True)
+                # Append the new token to the sequence of generated IDs for further processing/decoding
+                generated_ids = torch.cat([generated_ids, next_token], dim=-1)
+
+                token_str = self.tokenizer.decode(next_token[0], skip_special_tokens=True, clean_up_tokenization_spaces=True)
                 yield token_str
                 
                 self.token_index += 1  # Increment for each generated token, allowing decay in hooks
-                generated_tokens_count += 1
             
+        # It's good practice to remove hooks after generation to prevent side effects
+        # self._remove_steering_hooks()
+
     # def cleanup(self):
     #     """Clean up resources."""
     #     self._remove_steering_hooks()

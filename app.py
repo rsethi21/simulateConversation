@@ -151,8 +151,8 @@ with st.sidebar:
     name_b = st.text_input("Model B Name", value=config.get("default_name_b", "Model B"), key="name_b")
 
     st.subheader("Steering Vector Intensity")
-    intensity_a = st.slider("Intensity A", -2.0, 2.0, config["default_intensity"], step=0.01, key="intensity_a")
-    intensity_b = st.slider("Intensity B", -2.0, 2.0, config["default_intensity"], step=0.01, key="intensity_b")
+    intensity_a = st.slider("Intensity A", -20.0, 20.0, config["default_intensity"], step=0.01, key="intensity_a")
+    intensity_b = st.slider("Intensity B", -20.0, 20.0, config["default_intensity"], step=0.01, key="intensity_b")
     col_intensity_a, col_intensity_b = st.columns(2)
     with col_intensity_a:
         if st.button("Update Steering Intensity A") and st.session_state.conversation:
@@ -163,7 +163,7 @@ with st.sidebar:
             st.session_state.conversation.model_b.update_steering_intensity(intensity_b)
             st.success("Model B steering intensity updated!")
 
-    decay_rate = st.slider("Steering Decay Rate", 0.0, 1.0, 0.95, step=0.01, 
+    decay_rate = st.slider("Steering Decay Rate", 0.0, 1.0, config.get("default_decay_rate", 1.0), step=0.01,
                           help="Lower = faster decay. 1.0 = no decay", key="decay_rate")
     
     st.subheader("Generation Settings")

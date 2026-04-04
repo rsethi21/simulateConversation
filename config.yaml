@@ -11,13 +11,14 @@ knowledge_base_dir: "./knowledge_bases" # New: Directory for knowledge base file
 default_temperature: 0.7
 default_top_k: 50
 max_tokens: 256
-default_intensity: 0.05
+default_intensity: 1.0
 max_context_messages: 2
 default_num_beams: 1 # New: Default number of beams for generation
 default_length_penalty: 1.0 # New: Default length penalty for generation
+default_decay_rate: 1.0 # New: Default decay rate for steering vectors
 
 # Preloaded Steering Vectors (PyTorch .pt files)
-vector_a: "./vectors/vector_a.pt" # Example path to a steering vector for model_a
+vector_a: "./vectors/angry (2).pt" # Example path to a steering vector for model_a
 vector_b: null
 
 # Default Roles (one for each model, displayed in UI text boxes)
