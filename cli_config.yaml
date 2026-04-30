@@ -12,9 +12,10 @@ default_temperature: 0.7
 default_top_k: 50
 max_tokens: 256
 default_intensity: 0.05
-max_context_messagess: 2
-default_num_beams: 1 # New: Default number of beams for generation
-default_length_penalty: 1.0 # New: Default length penalty for generation
+max_context_messages: 2 # Fixed typo from max_context_messagess
+default_num_beams: 1 # Updated default for num_beams
+default_length_penalty: 1.0 # Updated default for length_penalty
+decay_rate: 0.95 # Changed key from default_decay_rate
 
 # Preloaded Steering Vectors (PyTorch .pt files)
 vector_a: null
@@ -47,14 +48,16 @@ default_name_a: "Physician"
 default_name_b: "Patient"
 
 # Default Knowledge Bases (text files, relative to knowledge_base_dir)
-default_knowledge_base_a_path: "test.txt" # e.g., "physician_knowledge.txt"
-default_knowledge_base_b_path: null # e.g., "patient_knowledge.txt"
+# These are now folders that will contain individual KB files for dynamic loading
+default_knowledge_base_a_folder: "knowledge_bases" # e.g., "knowledge_bases/physician_kb"
+default_knowledge_base_b_folder: null # e.g., "knowledge_bases/patient_kb"
 
 # UI Preferences
 ui_theme: "light"
 
 # CLI Settings
-cli_input_folder: "./cli_inputs" # Path to a folder containing question files
+# cli_input_folder: "./cli_inputs" # Removed: Input is now from a CSV
+cli_input_data: "./cli_inputs/questions.csv" # New: Path to the CSV input file
 cli_max_turns: 5 # Number of turns for the CLI conversation
 cli_output_folder: "./cli_conversations" # Folder to save individual conversation history files
 cli_starting_model: "model_a" # Which model starts the CLI conversation
