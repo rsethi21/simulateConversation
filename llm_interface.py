@@ -3,7 +3,6 @@ from typing import Optional, Generator
 from model_manager import ModelManager
 from custom_steering_vectors import CustomSteeringVector
 import torch
-from steering_vectors import SteeringVector
 import numpy as np
 
 class LLMInterface:
