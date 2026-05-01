@@ -81,6 +81,10 @@ def run_cli_conversation():
 
     llm_a.set_decay_rate(decay_rate)
     llm_b.set_decay_rate(decay_rate)
+    llm_a.set_warmup_tokens(config.get("default_warmup_tokens", 0))
+    llm_b.set_warmup_tokens(config.get("default_warmup_tokens", 0))
+    llm_a.set_min_intensity(config.get("default_min_intensity", 0.0))
+    llm_b.set_min_intensity(config.get("default_min_intensity", 0.0))
 
     # Set personalities
     role_a = config.get("default_role_a", "")

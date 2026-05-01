@@ -17,20 +17,44 @@ class LLMInterface:
         self.steering_vector: Optional[CustomSteeringVector] = None
         self.hook_handles = []
         self.token_index = 0  # Track position in generation
-        self.decay_rate = 0.95  # Exponential decay factor (0.0-1.0)
+        self.decay_rate = 0.95  # Exponential decay factor after warmup (0.0-1.0)
+        self.warmup_tokens = 0  # Number of generated tokens used for linear warmup
+        self.min_intensity = 0.0  # Minimum scheduled intensity floor
         self.device = self.model.device # Use the model's device
     
     def set_decay_rate(self, decay_rate: float):
-        """Set the exponential decay rate for steering intensity (0.0-1.0)."""
+        """Set the exponential decay rate for steering intensity after warmup."""
         if 0.0 <= decay_rate <= 1.0:
             self.decay_rate = decay_rate
         else:
             raise ValueError("decay_rate must be between 0.0 and 1.0")
+
+    def set_warmup_tokens(self, warmup_tokens: int):
+        """Set the number of generated tokens to warm up intensity linearly."""
+        if warmup_tokens < 0:
+            raise ValueError("warmup_tokens must be non-negative")
+        self.warmup_tokens = warmup_tokens
+
+    def set_min_intensity(self, min_intensity: float):
+        """Set the minimum intensity floor for the warmup + decay schedule."""
+        if not 0.0 <= min_intensity <= 1.0:
+            raise ValueError("min_intensity must be between 0.0 and 1.0")
+        self.min_intensity = min_intensity
     
     def _calculate_decay(self, token_position: int) -> float:
-        """Calculate decay factor at given token position."""
-        # Start decay after the prompt tokens, so token_position is relative to generated tokens
-        return self.decay_rate ** token_position
+        """Calculate the warmup + decay intensity factor at a given generated token position."""
+        if token_position < 0:
+            return 1.0
+
+        # Linear warmup over the first warmup_tokens generated tokens.
+        if self.warmup_tokens > 0 and token_position < self.warmup_tokens:
+            warmup_factor = float(token_position + 1) / float(self.warmup_tokens)
+            return max(self.min_intensity, warmup_factor)
+
+        # After warmup, apply exponential decay on the relative token index.
+        decay_position = max(0, token_position - self.warmup_tokens)
+        decay_factor = self.decay_rate ** decay_position
+        return max(self.min_intensity, decay_factor)
     
     def set_personality(self, personality: str):
         """Set the system prompt (personality) for this model."""
@@ -161,7 +185,7 @@ class LLMInterface:
             )
             self.token_index += max_tokens  # Update after generation
         
-        response = self.tokenizer.decode(outputs[0][len(inputs["input_ids"][0]):], skip_special_tokens=True)
+        response = self.tokenizer.decode(outputs[0][len(inputs["input_ids"][0]):], skip_special_tokens=False)
         return response
     
     def generate_stream(self, prompt: str, temperature: float = 0.7,
@@ -231,7 +255,7 @@ class LLMInterface:
                 # Append the new token to the sequence of generated IDs for further processing/decoding
                 generated_ids = torch.cat([generated_ids, next_token], dim=-1)
 
-                token_str = self.tokenizer.decode(next_token[0], skip_special_tokens=True, clean_up_tokenization_spaces=True)
+                token_str = self.tokenizer.decode(next_token[0], skip_special_tokens=False, clean_up_tokenization_spaces=True)
                 yield token_str
                 
                 self.token_index += 1  # Increment for each generated token, allowing decay in hooks

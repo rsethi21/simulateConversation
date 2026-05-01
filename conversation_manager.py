@@ -70,6 +70,7 @@ class ConversationManager:
         else:
             response = model.generate(user_prompt, temperature=temperature, max_tokens=max_tokens,
                                       num_beams=num_beams, length_penalty=length_penalty) # Pass num_beams, length_penalty
+        response = response[response.index("<|start|>assistant<|channel|>final<|message|>")+len("<|start|>assistant<|channel|>final<|message|>"):response.rindex("<|return|>")]
         return response
     
     def start_conversation(self, user_message: str, temperature: float = 0.7,

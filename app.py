@@ -165,6 +165,10 @@ with st.sidebar:
 
     decay_rate = st.slider("Steering Decay Rate", 0.0, 1.0, config.get("default_decay_rate", 1.0), step=0.01,
                           help="Lower = faster decay. 1.0 = no decay", key="decay_rate")
+    warmup_tokens = st.number_input("Warmup Tokens", min_value=0, max_value=500, value=config.get("default_warmup_tokens", 0), step=1, key="warmup_tokens",
+                                   help="Number of generated tokens used to ramp steering intensity up linearly.")
+    min_intensity = st.slider("Minimum Steering Intensity", 0.0, 1.0, config.get("default_min_intensity", 0.0), step=0.01, key="min_intensity",
+                              help="Intensity floor after warmup and decay.")
     
     st.subheader("Generation Settings")
     temp_a = st.slider("Temperature A", 0.0, 2.0, 0.7, key="temp_a")
@@ -186,6 +190,10 @@ with st.sidebar:
         
         llm_a.set_decay_rate(decay_rate)
         llm_b.set_decay_rate(decay_rate)
+        llm_a.set_warmup_tokens(warmup_tokens)
+        llm_b.set_warmup_tokens(warmup_tokens)
+        llm_a.set_min_intensity(min_intensity)
+        llm_b.set_min_intensity(min_intensity)
         
         # New: Compose full system prompts for initialization
         full_system_prompt_a = compose_system_prompt(role_a, None)
