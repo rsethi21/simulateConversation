@@ -55,7 +55,7 @@ def run_cli_conversation():
 
     # Initialize shared managers once
     model_manager = ModelManager(cache_dir=config["model_cache_dir"])
-    vector_manager = SteeringVectorManager(vector_dir=config["vector_dir"], default_intensity=config["default_intensity"])
+    vector_manager = SteeringVectorManager(vector_dir=config["vector_dir"], default_intensity=config["default_intensity"], layer_to_apply=config.get("steering_vector_layer", "post_attention_layernorm"))
     vector_manager.preload_vectors(config.get("vector_a"), config.get("vector_b"))
 
     # Set common generation settings from config defaults

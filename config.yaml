@@ -16,6 +16,7 @@ max_context_messages: 2
 default_num_beams: 1 # New: Default number of beams for generation
 default_length_penalty: 1.0 # New: Default length penalty for generation
 default_decay_rate: 1.0 # New: Default decay rate for steering vectors
+steering_vector_layer: "post_attention_layernorm" # New: Configurable layer for steering vector application
 
 # Preloaded Steering Vectors (PyTorch .pt files)
 vector_a: "./vectors/angry (2).pt" # Example path to a steering vector for model_a

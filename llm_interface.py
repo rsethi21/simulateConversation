@@ -62,7 +62,7 @@ class LLMInterface:
             # If keys are already module names, we can use them directly
             named_modules = dict(self.model.named_modules())
             for index, vector in self.steering_vector.layer_activations.items():
-                name = f"model.layers.{index}.post_attention_layernorm"
+                name = f"model.layers.{index}.{self.steering_vector.layer_to_apply}"  # Construct module name based on index and layer type
                 if name in named_modules.keys():
                     module = named_modules.get(name)
                     if module is not None:

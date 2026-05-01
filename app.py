@@ -31,7 +31,7 @@ st.title("🤖 Dual LLM Conversation with Steering Vectors")
 # Initialize managers and session state for KB
 if "model_manager" not in st.session_state:
     st.session_state.model_manager = ModelManager(cache_dir=config["model_cache_dir"])
-    st.session_state.vector_manager = SteeringVectorManager(vector_dir=config["vector_dir"], default_intensity=config["default_intensity"])
+    st.session_state.vector_manager = SteeringVectorManager(vector_dir=config["vector_dir"], default_intensity=config["default_intensity"], layer_to_apply=config.get("steering_vector_layer", "post_attention_layernorm"))
     st.session_state.vector_manager.preload_vectors(config.get("vector_a"), config.get("vector_b"))
     st.session_state.conversation = None
     st.session_state.vector_a = st.session_state.vector_manager.get_vector('vector_a')

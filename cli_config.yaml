@@ -16,6 +16,7 @@ max_context_messages: 2 # Fixed typo from max_context_messagess
 default_num_beams: 1 # Updated default for num_beams
 default_length_penalty: 1.0 # Updated default for length_penalty
 decay_rate: 0.95 # Changed key from default_decay_rate
+steering_vector_layer: "post_attention_layernorm" # New: Configurable layer for steering vector application
 
 # Preloaded Steering Vectors (PyTorch .pt files)
 vector_a: null
