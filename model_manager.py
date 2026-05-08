@@ -12,8 +12,6 @@ class ModelManager:
     
     def load_model(self, model_name: str):
         """Load model and tokenizer from Hugging Face with local caching."""
-        if model_name in self.loaded_models:
-            return self.loaded_models[model_name]
         
         tokenizer = AutoTokenizer.from_pretrained(
             model_name,
@@ -25,9 +23,7 @@ class ModelManager:
             device_map="auto",
             torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32
         )
-        
-        self.loaded_models[model_name] = {"model": model, "tokenizer": tokenizer}
-        return self.loaded_models[model_name]
+        return {"model": model, "tokenizer": tokenizer}
     
     def unload_model(self, model_name: str):
         """Free memory by unloading a model."""
