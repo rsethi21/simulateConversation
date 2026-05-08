@@ -1,3 +1,5 @@
+import pdb
+
 import yaml
 import sys
 import os
@@ -125,6 +127,9 @@ def run_cli_conversation():
     # ...existing code...
     # for i, question_file_path in enumerate(question_files): # Replaced with DataFrame iteration
     for i, row in cli_input_df.iterrows():
+        # pdb.set_trace()
+        if i >= 1:
+            break
         # file_base_name = os.path.basename(question_file_path) # Removed
         # print(f"\n--- Starting Conversation {i+1}/{len(question_files)}: {file_base_name} ---") # Removed
         print(f"\n--- Starting Conversation {i+1}/{len(cli_input_df.index)}: QA ID {row.qa_id} ---") # Updated message

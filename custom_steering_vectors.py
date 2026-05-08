@@ -17,20 +17,18 @@ class CustomSteeringVector:
     def load_from_pt(file_path: str) -> "CustomSteeringVector":
         """Load steering vector from PyTorch .pt file with multi-layer activations."""
         data = torch.load(file_path, map_location='cpu', weights_only=False)  # Load on CPU to avoid device issues
-        data = {str(layer): vector.float().numpy() for layer, vector in data.layer_activations.items()}  # Ensure keys are strings
+        data = {str(layer): vector.float().numpy() for layer, vector in data.items()}  # Ensure keys are strings
         return CustomSteeringVector(data)
 
         layer_activations = {}
-        for layer, tensor in data.layer_activations.items():
+        for layer, tensor in data.items():
             layer_activations[layer] = tensor.float().numpy()
         
         return CustomSteeringVector(layer_activations)  # No intensity loaded
     
     def save_to_pt(self, file_path: str):
         """Save steering vector to PyTorch .pt file."""
-        data = {
-            'layer_activations': {str(layer): torch.from_numpy(vector) for layer, vector in self.layer_activations.items()}
-        }  # No intensity saved
+        data = {str(layer): torch.from_numpy(vector) for layer, vector in self.layer_activations.items()}  # No intensity saved
         torch.save(data, file_path)
     
     def set_intensity(self, intensity: float):
@@ -60,7 +58,7 @@ class CustomSteeringVector:
         return activations
 
 class SteeringVectorManager:
-    def __init__(self, vector_dir: str = "./vectors", default_intensity: float = 1.0):
+    def __init__(self, vector_dir: str = "./vectors", default_intensity: float = 1.0, layer_to_apply: str = "post_attention_layernorm"):
         self.vector_dir = Path(vector_dir)
         self.vector_dir.mkdir(parents=True, exist_ok=True)
         self.vectors = {}

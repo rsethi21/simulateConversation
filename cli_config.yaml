@@ -1,6 +1,6 @@
 # Available Models
-model_a: "Qwen/Qwen2.5-7B-Instruct"
-model_b: "Qwen/Qwen2.5-7B-Instruct"
+model_a: "meta-llama/Llama-3.1-8B-Instruct"
+model_b: "meta-llama/Llama-3.1-8B-Instruct"
 
 # Directories
 model_cache_dir: "./models"
@@ -21,7 +21,7 @@ default_min_intensity: 0.0 # New: Minimum intensity floor after warmup/decay
 steering_vector_layer: "post_attention_layernorm" # New: Configurable layer for steering vector application
 
 # Preloaded Steering Vectors (PyTorch .pt files)
-vector_a: null
+vector_a: ./vectors/angry.pt
 vector_b: null
 
 # Default Roles (one for each model, displayed in UI text boxes)
@@ -60,7 +60,7 @@ ui_theme: "light"
 
 # CLI Settings
 # cli_input_folder: "./cli_inputs" # Removed: Input is now from a CSV
-cli_input_data: "./cli_inputs/questions.csv" # New: Path to the CSV input file
+cli_input_data: "./cli_inputs/sample_inputs.csv" # New: Path to the CSV input file
 cli_max_turns: 5 # Number of turns for the CLI conversation
 cli_output_folder: "./cli_conversations" # Folder to save individual conversation history files
 cli_starting_model: "model_a" # Which model starts the CLI conversation
