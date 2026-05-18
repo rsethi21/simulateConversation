@@ -35,6 +35,12 @@ def load_config(config_path="cli_config.yaml"): # Kept original config file name
 def run_cli_conversation():
     config = load_config()
 
+    try:
+        token = load_config(config_path="hf_token.yaml").get("token") # Load token from separate config file
+    except FileNotFoundError:
+        print("Error: hf_token.yaml not found")
+        token=None
+
     print("--- Initializing CLI Dual LLM Conversation ---")
 
     # Get CLI specific settings
@@ -78,8 +84,8 @@ def run_cli_conversation():
     model_a_id = config["model_a"]
     model_b_id = config["model_b"]
 
-    llm_a = LLMInterface(model_a_id, display_name_a, model_manager) # Pass display_name_a
-    llm_b = LLMInterface(model_b_id, display_name_b, model_manager) # Pass display_name_b
+    llm_a = LLMInterface(model_a_id, display_name_a, model_manager, token=token) # Pass display_name_a and token
+    llm_b = LLMInterface(model_b_id, display_name_b, model_manager, token=token) # Pass display_name_b and token
 
     llm_a.set_decay_rate(decay_rate)
     llm_b.set_decay_rate(decay_rate)

@@ -6,11 +6,11 @@ import torch
 import numpy as np
 
 class LLMInterface:
-    def __init__(self, model_name: str, model_display_name: str, manager: ModelManager):
+    def __init__(self, model_name: str, model_display_name: str, manager: ModelManager, token: str = None):
         self.model_name = model_name
         self.model_display_name = model_display_name
         self.manager = manager
-        self.model_data = manager.load_model(model_name)
+        self.model_data = manager.load_model(model_name, token=token)
         self.model = self.model_data["model"]
         self.tokenizer = self.model_data["tokenizer"]
         self.system_prompt = ""
@@ -37,8 +37,6 @@ class LLMInterface:
 
     def set_min_intensity(self, min_intensity: float):
         """Set the minimum intensity floor for the warmup + decay schedule."""
-        if not 0.0 <= min_intensity <= 1.0:
-            raise ValueError("min_intensity must be between 0.0 and 1.0")
         self.min_intensity = min_intensity
     
     def _calculate_decay(self, token_position: int) -> float:
