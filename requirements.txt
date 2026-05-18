@@ -7,3 +7,4 @@ accelerate
 matplotlib
 pandas
 argparse
+sae-lens
