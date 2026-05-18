@@ -16,6 +16,7 @@ class ModelManager:
             tokenizer = AutoTokenizer.from_pretrained(
             model_name,
             cache_dir=str(self.cache_dir),
+            clean_up_tokenization_spaces=False,
             token=token
             )
             model = AutoModelForCausalLM.from_pretrained(
@@ -28,7 +29,8 @@ class ModelManager:
         else:
             tokenizer = AutoTokenizer.from_pretrained(
                 model_name,
-                cache_dir=str(self.cache_dir)
+                cache_dir=str(self.cache_dir),
+                clean_up_tokenization_spaces=False
             )
             model = AutoModelForCausalLM.from_pretrained(
                 model_name,

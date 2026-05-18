@@ -85,8 +85,9 @@ class LLMInterface:
             named_modules = dict(self.model.named_modules())
             for index, vector in self.steering_vector.layer_activations.items():
                 name = f"model.layers.{index}.{self.steering_vector.layer_to_apply}"  # Construct module name based on index and layer type
-                if name in named_modules.keys():
-                    module = named_modules.get(name)
+                name_2 = f"model.language_model.layers.{index}.{self.steering_vector.layer_to_apply}"  # Alternative name pattern for some models
+                if name in named_modules.keys() or name_2 in named_modules.keys():
+                    module = named_modules.get(name) or named_modules.get(name_2)
                     if module is not None:
                         def steering_hook_factory(layer_name, steering_vector_data):
                             # Ensure steering_vector_data is a torch.Tensor and move to device
@@ -247,13 +248,14 @@ class LLMInterface:
                 next_token = torch.multinomial(probs, num_samples=1)
                 
                 # Check for EOS token
-                if next_token.item() == self.tokenizer.eos_token_id:
+                generated_ids = torch.cat([generated_ids, next_token], dim=-1)
+
+
+                if next_token.item() in self.model.generation_config.eos_token_id:
                     break
 
                 # Append the new token to the sequence of generated IDs for further processing/decoding
-                generated_ids = torch.cat([generated_ids, next_token], dim=-1)
-
-                token_str = self.tokenizer.decode(next_token[0], skip_special_tokens=False, clean_up_tokenization_spaces=True)
+                token_str = self.tokenizer.decode(next_token[0], skip_special_tokens=False, clean_up_tokenization_spaces=False)
                 yield token_str
                 
                 self.token_index += 1  # Increment for each generated token, allowing decay in hooks

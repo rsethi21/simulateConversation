@@ -8,16 +8,16 @@ vector_dir: "./vectors"
 knowledge_base_dir: "./knowledge_bases" # New: Directory for knowledge base files
 
 # Default Settings
-default_temperature: 0.7
+default_temperature: 0.3
 default_top_k: 50
 max_tokens: 256
-default_intensity: 10.0
+default_intensity: 1000.0
 max_context_messages: 2 # Fixed typo from max_context_messagess
 default_num_beams: 1 # Updated default for num_beams
 default_length_penalty: 1.0 # Updated default for length_penalty
 decay_rate: 1.0 # Changed key from default_decay_rate
 default_warmup_tokens: 0 # New: Number of tokens used to linearly warm up steering intensity
-default_min_intensity: 10.0 # New: Minimum intensity floor after warmup/decay
+default_min_intensity: 1000.0 # New: Minimum intensity floor after warmup/decay
 steering_vector_layer: "post_attention_layernorm" # New: Configurable layer for steering vector application
 
 # Preloaded Steering Vectors (PyTorch .pt files)
@@ -61,6 +61,6 @@ ui_theme: "light"
 # CLI Settings
 # cli_input_folder: "./cli_inputs" # Removed: Input is now from a CSV
 cli_input_data: "./inputs/tuning.csv" # New: Path to the CSV input file
-cli_max_turns: 5 # Number of turns for the CLI conversation
+cli_max_turns: 3 # Number of turns for the CLI conversation
 cli_output_folder: "./outputs/gemma_angry" # Folder to save individual conversation history files
 cli_starting_model: "model_a" # Which model starts the CLI conversation
