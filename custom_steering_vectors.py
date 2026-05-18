@@ -4,10 +4,9 @@ from pathlib import Path
 from typing import Optional, Dict
 import torch
 import pdb
-from steering_vectors import SteeringVector  # Import the base class for type hinting
 
 class CustomSteeringVector:
-    def __init__(self, vector: SteeringVector, intensity: float = 1.0, layer_to_apply: str = "post_attention_layernorm"):
+    def __init__(self, vector: object, intensity: float = 1.0, layer_to_apply: str = "post_attention_layernorm"):
         self.layer_activations = vector
         self.intensity = intensity
         self.layer_to_apply = layer_to_apply
