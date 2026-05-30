@@ -13,7 +13,7 @@ class CustomSteeringVector:
         self.device = 0
     
     @staticmethod
-    def load_from_pt(file_path: str) -> "CustomSteeringVector":
+    def load_from_pt(file_path: str, layer_to_apply: str = "post_attention_layernorm") -> "CustomSteeringVector":
         """Load steering vector from PyTorch .pt file with multi-layer activations."""
         data = torch.load(file_path, map_location='cpu', weights_only=False)  # Load on CPU to avoid device issues
         data = {str(layer): vector.float().numpy() for layer, vector in data.items()}  # Ensure keys are strings
@@ -23,7 +23,7 @@ class CustomSteeringVector:
         for layer, tensor in data.items():
             layer_activations[layer] = tensor.float().numpy()
         
-        return CustomSteeringVector(layer_activations)  # No intensity loaded
+        return CustomSteeringVector(layer_activations, layer_to_apply=layer_to_apply)  # No intensity loaded
     
     def save_to_pt(self, file_path: str):
         """Save steering vector to PyTorch .pt file."""
@@ -57,25 +57,23 @@ class CustomSteeringVector:
         return activations
 
 class SteeringVectorManager:
-    def __init__(self, vector_dir: str = "./vectors", default_intensity: float = 1.0, layer_to_apply: str = "post_attention_layernorm"):
+    def __init__(self, vector_dir: str = "./vectors"):
         self.vector_dir = Path(vector_dir)
         self.vector_dir.mkdir(parents=True, exist_ok=True)
         self.vectors = {}
-        self.default_intensity = default_intensity
     
-    def load_vector(self, name: str, file_path: str) -> CustomSteeringVector:
+    def load_vector(self, name: str, file_path: str, layer_to_apply: str = "post_attention_layernorm") -> CustomSteeringVector:
         """Load a steering vector from .pt file."""
-        vector = CustomSteeringVector.load_from_pt(file_path)
-        vector.set_intensity(self.default_intensity)  # Set from config
+        vector = CustomSteeringVector.load_from_pt(file_path, layer_to_apply=layer_to_apply)
         self.vectors[name] = vector
         return vector
     
-    def preload_vectors(self, vector_a_path: Optional[str], vector_b_path: Optional[str]):
+    def preload_vectors(self, vector_a_path: Optional[str], vector_b_path: Optional[str], layer_to_apply_a: str = "post_attention_layernorm", layer_to_apply_b: str = "post_attention_layernorm"):
         """Preload vectors for Model A and Model B on launch, skipping if path is None."""
         if vector_a_path:
-            self.load_vector('vector_a', vector_a_path)
+            self.load_vector('vector_a', vector_a_path, layer_to_apply=layer_to_apply_a)
         if vector_b_path:
-            self.load_vector('vector_b', vector_b_path)
+            self.load_vector('vector_b', vector_b_path, layer_to_apply=layer_to_apply_b)
     
     def get_vector(self, name: str) -> Optional[CustomSteeringVector]:
         """Retrieve a loaded vector."""

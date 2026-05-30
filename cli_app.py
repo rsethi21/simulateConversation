@@ -63,8 +63,8 @@ def run_cli_conversation():
 
     # Initialize shared managers once
     model_manager = ModelManager(cache_dir=config["model_cache_dir"])
-    vector_manager = SteeringVectorManager(vector_dir=config["vector_dir"], default_intensity=config["default_intensity"], layer_to_apply=config.get("steering_vector_layer", "post_attention_layernorm"))
-    vector_manager.preload_vectors(config.get("vector_a"), config.get("vector_b"))
+    vector_manager = SteeringVectorManager(vector_dir=config["vector_dir"])
+    vector_manager.preload_vectors(config.get("vector_a"), config.get("vector_b"), config.get("steering_vector_layer_a", "post_attention_layernorm"), config.get("steering_vector_layer_b", "post_attention_layernorm"))
 
     # Set common generation settings from config defaults
     temp_a = config.get("default_temperature", 0.7)
@@ -91,8 +91,8 @@ def run_cli_conversation():
     llm_b.set_decay_rate(decay_rate)
     llm_a.set_warmup_tokens(config.get("default_warmup_tokens", 0))
     llm_b.set_warmup_tokens(config.get("default_warmup_tokens", 0))
-    llm_a.set_min_intensity(config.get("default_min_intensity", 0.0))
-    llm_b.set_min_intensity(config.get("default_min_intensity", 0.0))
+    llm_a.set_min_intensity(config.get("default_min_intensity_a", 0.0))
+    llm_b.set_min_intensity(config.get("default_min_intensity_b", 0.0))
 
     # Set personalities
     role_a = config.get("default_role_a", "")
@@ -109,10 +109,10 @@ def run_cli_conversation():
     vector_b_obj = vector_manager.get_vector('vector_b')
     if vector_a_obj:
         llm_a.set_steering_vector(vector_a_obj)
-        llm_a.update_steering_intensity(config.get("default_intensity", 0.05))
+        llm_a.update_steering_intensity(config.get("default_intensity_a", 0.05))
     if vector_b_obj:
         llm_b.set_steering_vector(vector_b_obj)
-        llm_b.update_steering_intensity(config.get("default_intensity", 0.05))
+        llm_b.update_steering_intensity(config.get("default_intensity_b", 0.05))
 
     # Find all question files in the input folder
     # ...existing code...
