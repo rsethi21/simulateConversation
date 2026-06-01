@@ -21,6 +21,7 @@ class LLMInterface:
         self.warmup_tokens = 0  # Number of generated tokens used for linear warmup
         self.min_intensity = 0.0  # Minimum scheduled intensity floor
         self.device = self.model.device # Use the model's device
+        self.system_prompt_tokens_length = 0
     
     def set_decay_rate(self, decay_rate: float):
         """Set the exponential decay rate for steering intensity after warmup."""
@@ -114,7 +115,11 @@ class LLMInterface:
                                 steering_tensor_on_device_and_dtype = base_steering_tensor.to(target_dtype)
                                 
                                 # Perform the addition directly on tensors, maintaining dtype
-                                steered_output = original_output_tensor + adjusted_intensity * steering_tensor_on_device_and_dtype
+                                steered_output = original_output_tensor.clone()
+                                if steered_output.shape[1] > 1: # First pass (Prompt processing)
+                                    steered_output[:,self.system_prompt_tokens_length:,:] = original_output_tensor[:,self.system_prompt_tokens_length:,:] + adjusted_intensity * steering_tensor_on_device_and_dtype
+                                else:
+                                    steered_output = original_output_tensor + adjusted_intensity * steering_tensor_on_device_and_dtype
                                 
                                 if isinstance(output, tuple):
                                     return (steered_output,) + output[1:]
@@ -191,7 +196,15 @@ class LLMInterface:
                        top_k: int = 50, max_tokens: int = 256) -> Generator[str, None, None]:
         """Stream tokens one at a time with decay applied via registered hooks."""
         full_prompt = self._format_prompt(prompt)
+        try:
+            prompt_to_cache_index = full_prompt.index("Last messages (if any):\n") + len("Last messages (if any):\n") # Calculate the length of the system prompt to determine where generated tokens start
+        except ValueError:
+            prompt_to_cache_index = None  # Default to the beginning if the substring is not found
         inputs = self.tokenizer(full_prompt, return_tensors="pt").to(self.model.device)
+        if prompt_to_cache_index is not None:
+            self.system_prompt_tokens_length = len(self.tokenizer(full_prompt[:prompt_to_cache_index], add_special_tokens=True)["input_ids"])
+        else:
+            self.system_prompt_tokens_length = 0
         
         input_ids = inputs["input_ids"]
         # `current_attention_mask` will track the full attention mask for the entire sequence
@@ -200,6 +213,12 @@ class LLMInterface:
         self.token_index = 0  # Reset decay tracking for generated tokens (relative to generated tokens)
 
         generated_ids = input_ids # This will accumulate prompt tokens + generated tokens
+        # if self.kv_cache is not None:
+        #     past_key_values = self.kv_cache
+        #     cache_len = past_key_values[0][0].shape[2]  # Get sequence length from the first layer's key tensor
+        #     cache_mask = torch.ones((1, 1, cache_len), dtype=torch.long, device=self.device)  # Mask for the cached tokens
+        #     current_attention_mask = torch.cat([cache_mask, current_attention_mask], dim=-1)
+        # else:
         past_key_values = None
         
         with torch.no_grad():
@@ -211,6 +230,12 @@ class LLMInterface:
                         "input_ids": generated_ids,
                         "attention_mask": current_attention_mask,
                     }
+                # elif i == 0 and past_key_values is not None:
+                #     model_inputs_for_call = {
+                #         "input_ids": generated_ids,
+                #         "attention_mask": current_attention_mask,
+                #         "past_key_values": past_key_values,
+                #     }
                 else:
                     # Subsequent calls: pass only the most recently generated token
                     # The attention_mask needs to be extended by one for the new token

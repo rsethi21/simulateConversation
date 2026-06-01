@@ -62,10 +62,11 @@ class ConversationManager:
             user_prompt = self.get_context(max_messages=max_context) or self.get_context(max_context) or ""
 
         if model is self.model_a:
-            user_prompt = f"Knowledge Base:\n{self.knowledge_base_a}\n---------------------\nLast two messages (if any):\n{user_prompt}"
+            user_prompt = f"Knowledge Base:\n{self.knowledge_base_a}\n---------------------\nLast messages (if any):\n{user_prompt}"
         else:
-            user_prompt = f"Knowledge Base:\n{self.knowledge_base_b}\n---------------------\nLast two messages (if any):\n{user_prompt}"
+            user_prompt = f"Knowledge Base:\n{self.knowledge_base_b}\n---------------------\nLast messages (if any):\n{user_prompt}"
 
+        # create a new variable in generate_stream that allows me to pass the text I want to cache for all turns and the new conversation context for current turn so that I know what to concat
         if model.steering_vector:
             response = model.generate_stream(user_prompt, temperature=temperature, max_tokens=max_tokens) # Pass num_beams, length_penalty
         else:

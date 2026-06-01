@@ -1,4 +1,4 @@
-# Available Models
+# Available Models:
 model_a: "google/gemma-3-4b-it"
 model_b: "google/gemma-3-4b-it"
 
@@ -11,15 +11,15 @@ knowledge_base_dir: "./knowledge_bases" # New: Directory for knowledge base file
 default_temperature: 0.3
 default_top_k: 50
 max_tokens: 256
-default_intensity_a: -150.0 # 150.0
-default_intensity_b: 150.0
+default_intensity_a: -200.0 # 150.0
+default_intensity_b: 22.0
 max_context_messages: 10 # Fixed typo from max_context_messagess
 default_num_beams: 1 # Updated default for num_beams
 default_length_penalty: 5.0 # Updated default for length_penalty
 decay_rate: 1.0 # Changed key from default_decay_rate
 default_warmup_tokens: 0 # New: Number of tokens used to linearly warm up steering intensity
-default_min_intensity_a: -150.0 # 150.0 # New: Minimum intensity floor after warmup/decay
-default_min_intensity_b: 150.0
+default_min_intensity_a: -200.0 # 150.0 # New: Minimum intensity floor after warmup/decay
+default_min_intensity_b: 22.0
 steering_vector_layer_a: "mlp" # New: Configurable layer for steering vector application
 steering_vector_layer_b: "mlp" # New: Configurable layer for steering vector application
 
@@ -63,7 +63,7 @@ ui_theme: "light"
 
 # CLI Settings
 # cli_input_folder: "./cli_inputs" # Removed: Input is now from a CSV
-cli_input_data: "./inputs/tuning.csv" # New: Path to the CSV input file
+cli_input_data: "./inputs/sample_inputs_trimmed.csv" # New: Path to the CSV input file
 cli_max_turns: 3 # Number of turns for the CLI conversation
-cli_output_folder: "./outputs/angry_deescalation" # Folder to save individual conversation history files
+cli_output_folder: "./outputs/angry_deescalation_spare" # Folder to save individual conversation history files
 cli_starting_model: "model_a" # Which model starts the CLI conversation
