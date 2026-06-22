@@ -1,9 +1,40 @@
 import pdb
-from typing import Optional, Generator
+from typing import Optional, Generator, List
 from model_manager import ModelManager
 from custom_steering_vectors import CustomSteeringVector
 import torch
 import numpy as np
+from transformers import LogitsProcessor, LogitsProcessorList # Import these
+
+class DecayTokenIndexLogitsProcessor(LogitsProcessor):
+    """
+    A custom LogitsProcessor to update the LLMInterface's token_index 
+    for progressive decay calculations during model.generate().
+    It needs to track for each item in the batch.
+    However, since ConversationManager is not doing true batching across conversations,
+    this will operate on a batch of size 1 where input_ids.shape[-1] is the current sequence length.
+    """
+    def __init__(self, llm_interface_instance, initial_prompt_lengths: List[int]):
+        self.llm_interface = llm_interface_instance
+        # Store initial prompt lengths for each item in the batch.
+        # If ConversationManager sends a batch of 1, this will be List[int] of size 1.
+        self.initial_prompt_lengths = initial_prompt_lengths 
+
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor) -> torch.FloatTensor:
+        # input_ids shape: (batch_size, current_sequence_length)
+        # Assuming we only care about the first item in the batch for self.token_index (for single conversation flow)
+        if input_ids.shape[0] > 0:
+            current_sequence_length = input_ids[0].shape[-1]
+            initial_prompt_length = self.initial_prompt_lengths[0] # Take the length for the first (only) item in batch
+            
+            generated_tokens_count = max(0, current_sequence_length - initial_prompt_length)
+            
+            # Update the token_index in the LLMInterface instance
+            # This self.token_index will then be used by the steering_hook when it's called
+            self.llm_interface.token_index = generated_tokens_count
+        
+        # This processor doesn't modify logits, so return them as is
+        return scores
 
 class LLMInterface:
     def __init__(self, model_name: str, model_display_name: str, manager: ModelManager, token: str = None):
@@ -107,7 +138,7 @@ class LLMInterface:
                                 # Get the dtype of the model's activation
                                 target_dtype = original_output_tensor.dtype
                                 
-                                decay_factor = self._calculate_decay(self.token_index)
+                                decay_factor = self._calculate_decay(self.token_index) # self.token_index will be updated by LogitsProcessor
                                 adjusted_intensity = self.steering_vector.intensity * decay_factor
                                 
                                 # Cast the base_steering_tensor to the target_dtype before addition
@@ -146,36 +177,60 @@ class LLMInterface:
             handle.remove()
         self.hook_handles = []
     
-    def _format_prompt(self, user_message: str) -> str:
-        """Format conversation using chat template if available."""
-        messages = []
-        
-        # Add system prompt if present
-        if self.system_prompt:
-            messages.append({"role": "system", "content": self.system_prompt})
-        
-        # Add user message
-        messages.append({"role": "user", "content": user_message})
-        
-        # Use apply_chat_template if available, otherwise fallback to manual format
-        if hasattr(self.tokenizer, 'apply_chat_template'):
-            return self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-        else:
-            # Fallback manual format
-            prompt = ""
+    def _format_prompt(self, user_messages: List[str]) -> List[str]: # Updated signature
+        """Format conversation using chat template if available, handling multiple messages."""
+        formatted_prompts = []
+        for user_message in user_messages:
+            messages = []
             if self.system_prompt:
-                prompt += f"System: {self.system_prompt}\n"
-            prompt += f"User: {user_message}\nAssistant:"
-            return prompt
+                messages.append({"role": "system", "content": self.system_prompt})
+            messages.append({"role": "user", "content": user_message})
+            
+            if hasattr(self.tokenizer, 'apply_chat_template'):
+                formatted_prompts.append(self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True))
+            else:
+                prompt = ""
+                if self.system_prompt:
+                    prompt += f"System: {self.system_prompt}\n"
+                prompt += f"User: {user_message}\nAssistant:"
+                formatted_prompts.append(prompt)
+        return formatted_prompts # Always return a list of strings
     
-    def generate(self, prompt: str, temperature: float = 0.7, 
+    def generate(self, prompts: List[str], temperature: float = 0.7, # Updated signature
                  top_k: int = 50, max_tokens: int = 256, 
-                 num_beams: int = 1, length_penalty: float = 1.0) -> str:
-        """Generate a response with optional steering applied via registered hooks."""
-        full_prompt = self._format_prompt(prompt)
-        inputs = self.tokenizer(full_prompt, return_tensors="pt").to(self.model.device)
-        self.token_index = 0  # Reset decay tracking
-        # Hooks are automatically invoked during forward pass within generate()
+                 num_beams: int = 1, length_penalty: float = 1.0) -> List[str]: # Updated return type
+        """Generate responses for a batch of prompts with optional steering applied via registered hooks."""
+        full_formatted_prompts = self._format_prompt(prompts) # _format_prompt now returns List[str]
+
+        # Calculate system_prompt_tokens_length based on the first prompt in the batch.
+        # This assumes the system prompt portion for steering start is consistent across the batch.
+        try:
+            # Look for "Knowledge Base:" in the first prompt of the batch
+            prompt_to_cache_index = full_formatted_prompts[0].index("Knowledge Base:")
+        except ValueError:
+            prompt_to_cache_index = None
+
+        # Tokenize the batch of prompts
+        # Add padding and truncation for proper batching
+        inputs = self.tokenizer(full_formatted_prompts, return_tensors="pt", padding=True, truncation=True).to(self.model.device)
+
+        if prompt_to_cache_index is not None:
+            # Calculate length based on the first prompt in the batch
+            self.system_prompt_tokens_length = len(self.tokenizer(full_formatted_prompts[0][:prompt_to_cache_index], add_special_tokens=True)["input_ids"])
+        else:
+            self.system_prompt_tokens_length = 0
+
+        self.token_index = 0  # Reset decay tracking before generation starts
+
+        # Instantiate the custom logits processor
+        # Pass initial prompt lengths for each item in the batch.
+        # inputs["input_ids"] shape is (batch_size, sequence_length), so we need lengths for each.
+        initial_prompt_token_lengths = [len(ids) for ids in inputs["input_ids"]]
+        decay_processor = DecayTokenIndexLogitsProcessor(self, initial_prompt_token_lengths)
+        
+        # Create a LogitsProcessorList and add your custom processor
+        logits_processor_list = LogitsProcessorList([decay_processor])
+
         with torch.no_grad():
             outputs = self.model.generate(
                 **inputs,
@@ -184,20 +239,33 @@ class LLMInterface:
                 top_k=top_k,
                 do_sample=True,
                 pad_token_id=self.tokenizer.eos_token_id,
-                num_beams=num_beams,         # New parameter
-                length_penalty=length_penalty # New parameter
+                num_beams=num_beams,
+                length_penalty=length_penalty,
+                logits_processor=logits_processor_list # Pass the custom processor here
             )
-            self.token_index += max_tokens  # Update after generation
         
-        response = self.tokenizer.decode(outputs[0][len(inputs["input_ids"][0]):], skip_special_tokens=False)
-        return response
+        # Decode the batch of outputs
+        # outputs is typically (batch_size, generated_sequence_length)
+        # inputs["input_ids"] is (batch_size, prompt_length)
+        # We need to slice each generated sequence by its corresponding prompt length.
+        responses = []
+        for i in range(len(outputs)):
+            # Determine the length of the actual prompt for this specific item in the batch
+            # Note: For padded inputs, inputs["input_ids"][i] will be padded. We want the original non-padded length.
+            # However, the tokenizer's padding makes it such that the output will include all prompt tokens up to the pad_token_id.
+            # So, `inputs["input_ids"][i]` length is fine.
+            prompt_len = len(inputs["input_ids"][i])
+            generated_text = self.tokenizer.decode(outputs[i][prompt_len:], skip_special_tokens=True)
+            responses.append(generated_text)
+        
+        return responses
     
     def generate_stream(self, prompt: str, temperature: float = 0.7,
                        top_k: int = 50, max_tokens: int = 256) -> Generator[str, None, None]:
         """Stream tokens one at a time with decay applied via registered hooks."""
         full_prompt = self._format_prompt(prompt)
         try:
-            prompt_to_cache_index = full_prompt.index("Last messages (if any):\n") + len("Last messages (if any):\n") # Calculate the length of the system prompt to determine where generated tokens start
+            prompt_to_cache_index = full_prompt.index("Knowledge Base:") # Calculate the length of the system prompt to determine where generated tokens start
         except ValueError:
             prompt_to_cache_index = None  # Default to the beginning if the substring is not found
         inputs = self.tokenizer(full_prompt, return_tensors="pt").to(self.model.device)

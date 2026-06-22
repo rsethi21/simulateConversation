@@ -11,21 +11,21 @@ knowledge_base_dir: "./knowledge_bases" # New: Directory for knowledge base file
 default_temperature: 0.3
 default_top_k: 50
 max_tokens: 256
-default_intensity_a: -200.0 # 150.0
-default_intensity_b: 22.0
+default_intensity_a: 0 # -225.0 # 150.0
+default_intensity_b: 0 # 22.0
 max_context_messages: 10 # Fixed typo from max_context_messagess
 default_num_beams: 1 # Updated default for num_beams
 default_length_penalty: 5.0 # Updated default for length_penalty
 decay_rate: 1.0 # Changed key from default_decay_rate
 default_warmup_tokens: 0 # New: Number of tokens used to linearly warm up steering intensity
-default_min_intensity_a: -200.0 # 150.0 # New: Minimum intensity floor after warmup/decay
+default_min_intensity_a: -225.0 # 150.0 # New: Minimum intensity floor after warmup/decay
 default_min_intensity_b: 22.0
 steering_vector_layer_a: "mlp" # New: Configurable layer for steering vector application
 steering_vector_layer_b: "mlp" # New: Configurable layer for steering vector application
 
 # Preloaded Steering Vectors (PyTorch .pt files)
-vector_a: ./vectors/descalate.pt
-vector_b: ./vectors/angryplusreassurance.pt
+vector_a: null # ./vectors/descalate.pt
+vector_b: null # ./vectors/angryplusreassurance.pt
 
 # Default Roles (one for each model, displayed in UI text boxes)
 default_role_a: |
@@ -39,7 +39,7 @@ default_role_a: |
 
 default_role_b: |
   Role - Act as a patient with no medical background and a high school education.
-  Objective - Engage in a conversation with a physician about your health concerns. You must link every sentence you speak to the physician's latest explanation regarding the topic in the conversation history stated as 'INITIAL PROMPT'. Do not introduce completely new medical complaints, symptoms, or side-effects unless they are a direct consequence of the topic being discussed.
+  Objective - Engage in a conversation with a physician about your health concerns. You must link every sentence you speak to the physician's latest explanation regarding the topic in the conversation history. Do not introduce completely new medical complaints, symptoms, or side-effects unless they are a direct consequence of the topic being discussed.
   Communication Style Guidelines -
     Simple Language - Use 'living room' English. Use words like 'soreness,' 'funny feeling,' or 'trouble catching my breath' instead of clinical terms.
     Answer Length - Around 3 sentences; Each response should be as long as a real-time verbal response would be like. Each response should be as long as a real-time verbal response would be like.
@@ -56,14 +56,15 @@ default_name_b: "Patient"
 # Default Knowledge Bases (text files, relative to knowledge_base_dir)
 # These are now folders that will contain individual KB files for dynamic loading
 default_knowledge_base_a_folder: "knowledge_bases" # e.g., "knowledge_bases/physician_kb"
-default_knowledge_base_b_folder: null # e.g., "knowledge_bases/patient_kb"
+default_knowledge_base_b_folder: "knowledge_bases" # e.g., "knowledge_bases/patient_kb"
 
 # UI Preferences
 ui_theme: "light"
 
 # CLI Settings
 # cli_input_folder: "./cli_inputs" # Removed: Input is now from a CSV
-cli_input_data: "./inputs/sample_inputs_trimmed.csv" # New: Path to the CSV input file
+cli_input_data: "./inputs/tuning.csv" # New: Path to the CSV input file
 cli_max_turns: 3 # Number of turns for the CLI conversation
-cli_output_folder: "./outputs/angry_deescalation_spare" # Folder to save individual conversation history files
+cli_output_folder: "./outputs/test2" # Folder to save individual conversation history files
 cli_starting_model: "model_a" # Which model starts the CLI conversation
+"batch_size": 3 # New: Batch size for processing conversations in the CLI

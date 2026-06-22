@@ -130,63 +130,71 @@ def run_cli_conversation():
     output_file_path_df = os.path.join(cli_output_folder, output_filename_df)
     df = pd.DataFrame(columns=["question_id", "patient_question", "provider_response", "turn_id"])
 
+    batch_size = config.get("batch_size", 1) # New: Batch size for processing conversations
+    current_i = 0
     # ...existing code...
     # for i, question_file_path in enumerate(question_files): # Replaced with DataFrame iteration
-    for i, row in cli_input_df.iterrows():
-        # pdb.set_trace()
-        # file_base_name = os.path.basename(question_file_path) # Removed
-        # print(f"\n--- Starting Conversation {i+1}/{len(question_files)}: {file_base_name} ---") # Removed
-        print(f"\n--- Starting Conversation {i+1}/{len(cli_input_df.index)}: QA ID {row.qa_id} ---") # Updated message
+    while current_i < len(cli_input_df.index[0:3]):
+        rows = cli_input_df.iloc[current_i:current_i+batch_size] # Get batch of rows
+        # print(f"\n--- Starting Conversation {current_i+1}/{len(cli_input_df.index)}: QA ID {row.qa_id} ---") # Updated message
 
         # starting_prompt = load_prompt_from_file(question_file_path) # Removed
-        starting_prompt = row.question # New: Get prompt from DataFrame row
+        starting_prompts = list(rows.question) # New: Get prompt from DataFrame row
         # if not starting_prompt: # Removed
             # print(f"Skipping {file_base_name} due to empty or unreadable prompt.") # Removed
             # continue # Removed
         
         # New: Dynamic knowledge base loading per conversation
-        knowledge_base_a_content = None
-        knowledge_base_b_content = None
-        if default_kb_a_folder and row.trial_num:
-            path = os.path.join(default_kb_a_folder, f"{row.trial_num}.txt")
-            if os.path.exists(path):
-                with open(path, "r", encoding="utf-8") as file:
-                    knowledge_base_a_content = file.read()
+        knowledge_base_a_contents = []
+        knowledge_base_b_contents = []
+        for _, row in rows.iterrows():
+            knowledge_base_a_content = None
+            knowledge_base_b_content = None
 
-        if default_kb_b_folder and row.trial_num:
-            path = os.path.join(default_kb_b_folder, f"{row.trial_num}.txt")
-            if os.path.exists(path):
-                with open(path, "r", encoding="utf-8") as file:
-                    knowledge_base_b_content = file.read()
+            if default_kb_a_folder and row.trial_num:
+                path = os.path.join(default_kb_a_folder, f"{row.trial_num}.txt")
+                if os.path.exists(path):
+                    with open(path, "r", encoding="utf-8") as file:
+                        knowledge_base_a_content = file.read()
+
+            if default_kb_b_folder and row.trial_num:
+                path = os.path.join(default_kb_b_folder, f"{row.trial_num}.txt")
+                if os.path.exists(path):
+                    with open(path, "r", encoding="utf-8") as file:
+                        knowledge_base_b_content = file.read()
+            knowledge_base_a_contents.append(knowledge_base_a_content)
+            knowledge_base_b_contents.append(knowledge_base_b_content)
 
         # Start timer for this conversation
         start_time = time.time()
-
         # Re-initialize ConversationManager for each new conversation
-        conversation_manager = ConversationManager(llm_a, llm_b, cli_starting_model, knowledge_base_a=knowledge_base_a_content, knowledge_base_b=knowledge_base_b_content)
+        conversation_manager = ConversationManager(llm_a, llm_b, cli_starting_model, knowledge_base_a=knowledge_base_a_contents, knowledge_base_b=knowledge_base_b_contents)
         conversation_history = []
 
         # The initial user prompt is technically from the "user" role, but for CLI output, we can attribute it
         # to the non-starting model's personality, if that's how it's framed.
         # However, for consistency with app.py's "Initial Query (on behalf of model not starting)",
         # we'll just log it as "Initial Prompt".
-        print(f"[INITIAL PROMPT]: {starting_prompt}")
-        conversation_history.append(f"[INITIAL PROMPT]: {starting_prompt}")
-        
+
+        display_name = llm_b.model_display_name if cli_starting_model == "model_a" else llm_a.model_display_name
+        for starting_prompt in starting_prompts:
+            conversation_history.append([f"[Initial Prompt]: {starting_prompt}"]) # Log initial prompt(s) with a clear label
+
         current_temp = temp_a if cli_starting_model == "model_a" else temp_b
         try:
             # start_conversation returns a dict like {"model_a": response_content}
-            responses_dict = conversation_manager.start_conversation(
-                starting_prompt,
+            responses_list = conversation_manager.start_conversation(
+                starting_prompts,
                 temperature=current_temp,
                 max_tokens=max_tokens,
                 num_beams=num_beams,
                 length_penalty=length_penalty
             )
-            for model_key, content in responses_dict.items():
-                display_name = llm_a.model_display_name if model_key == "model_a" else llm_b.model_display_name
-                print(f"[{display_name}]: {content}")
-                conversation_history.append(f"[{display_name}]: {content}")
+            for i, batch in enumerate(responses_list):
+                for model_key, content in batch.items():
+                    display_name = llm_a.model_display_name if model_key == "model_a" else llm_b.model_display_name
+                    # print(f"[{display_name}]: {content}")
+                    conversation_history[i].append(f"[{display_name}]: {content}")
 
         except Exception as e:
             print(f"Error starting conversation for {row.qa_id}: {e}") # Updated error message
@@ -198,17 +206,18 @@ def run_cli_conversation():
             current_temp = temp_a if current_model_turn == "model_a" else temp_b
             try:
                 # continue_conversation returns a dict like {"model_b": response_content}
-                responses_dict = conversation_manager.continue_conversation(
+                responses_list = conversation_manager.continue_conversation(
                     temperature=current_temp,
                     max_tokens=max_tokens,
                     max_context=max_context,
                     num_beams=num_beams,
                     length_penalty=length_penalty
                 )
-                for model_key, content in responses_dict.items():
-                    display_name = llm_a.model_display_name if model_key == "model_a" else llm_b.model_display_name
-                    print(f"[{display_name}]: {content}")
-                    conversation_history.append(f"[{display_name}]: {content}")
+                for i, batch in enumerate(responses_list):
+                    for model_key, content in batch.items():
+                        display_name = llm_a.model_display_name if model_key == "model_a" else llm_b.model_display_name
+                    # print(f"[{display_name}]: {content}")
+                    conversation_history[i].append(f"[{display_name}]: {content}")
             except Exception as e:
                 print(f"Error during turn {turn+1} for {row.qa_id}: {e}") # Updated error message
                 break # Exit on error for this conversation
@@ -219,31 +228,32 @@ def run_cli_conversation():
         print(f"\n--- Conversation for {row.qa_id} Finished (Runtime: {runtime:.2f} seconds) ---") # Updated message
 
         # Save conversation history to a file in the output folder
-        output_filename = str(int(row.qa_id)) + "_conversation.txt" # Updated filename generation
-        output_file_path = os.path.join(cli_output_folder, output_filename)
-        try:
-            with open(output_file_path, "w", encoding="utf-8") as f:
-                f.write(f"--- Conversation for: Question {row.qa_id} ---\n") # Updated header
-                f.write(f"--- Runtime: {runtime:.2f} seconds ---\n\n")
-                for line in conversation_history:
-                    f.write(line + "\n--------------------\n") # Added separator for readability
-            print(f"Conversation history saved to {output_file_path}")
-        except IOError as e:
-            print(f"Error saving conversation history to {output_file_path}: {e}")
-        print("-" * 40)
+        for final_index, row in rows.reset_index(inplace=False).iterrows():
+            output_filename = str(int(row.qa_id)) + "_conversation.txt" # Updated filename generation
+            output_file_path = os.path.join(cli_output_folder, output_filename)
+            try:
+                with open(output_file_path, "w", encoding="utf-8") as f:
+                    f.write(f"--- Conversation for: Question {row.qa_id} ---\n") # Updated header
+                    f.write(f"--- Runtime: {runtime:.2f} seconds ---\n\n")
+                    for line in conversation_history[final_index]:
+                        f.write(line + "\n--------------------\n") # Added separator for readability
+                print(f"Conversation history saved to {output_file_path}")
+            except IOError as e:
+                print(f"Error saving conversation history to {output_file_path}: {e}")
+            print("-" * 40)
 
-        # New: Save conversation history to DataFrame
-        try:
-            skip = 2 # Assuming patient and provider alternate
-            question_id = row.qa_id
-            for j in range(0, len(conversation_history), skip):
-                turn = j/skip + 1
-                patient = conversation_history[j]
-                provider = conversation_history[j+1]
-                df.loc[len(df)] = {"question_id": question_id, "patient_question": patient, "provider_response": provider, "turn_id": turn}
-        except Exception as e: # Catch specific exception
-            print(f"Error saving conversation history to dataframe for QA ID {row.qa_id}: {e}") # More informative error
-
+            # New: Save conversation history to DataFrame
+            try:
+                skip = 2 # Assuming patient and provider alternate
+                question_id = row.qa_id
+                for j in range(0, len(conversation_history[final_index]), skip):
+                    turn = j/skip + 1
+                    patient = conversation_history[final_index][j]
+                    provider = conversation_history[final_index][j+1]
+                    df.loc[len(df)] = {"question_id": question_id, "patient_question": patient, "provider_response": provider, "turn_id": turn}
+            except Exception as e: # Catch specific exception
+                print(f"Error saving conversation history to dataframe for QA ID {row.qa_id}: {e}") # More informative error
+        current_i += batch_size # Move to the next batch of conversations
     df.to_csv(output_file_path_df, index=False) # New: Save DataFrame to CSV
     print(f"All conversation data saved to {output_file_path_df}") # New: Confirmation message
     print("\n--- All CLI Conversations Finished ---")
