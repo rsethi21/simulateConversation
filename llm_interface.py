@@ -238,7 +238,7 @@ class LLMInterface:
                 temperature=temperature,
                 top_k=top_k,
                 do_sample=True,
-                pad_token_id=self.tokenizer.eos_token_id,
+                pad_token_id=self.tokenizer.pad_token_id,
                 num_beams=num_beams,
                 length_penalty=length_penalty,
                 logits_processor=logits_processor_list # Pass the custom processor here

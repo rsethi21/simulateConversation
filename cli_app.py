@@ -134,7 +134,7 @@ def run_cli_conversation():
     current_i = 0
     # ...existing code...
     # for i, question_file_path in enumerate(question_files): # Replaced with DataFrame iteration
-    while current_i < len(cli_input_df.index[0:3]):
+    while current_i < len(cli_input_df.index[0:2]):
         rows = cli_input_df.iloc[current_i:current_i+batch_size] # Get batch of rows
         # print(f"\n--- Starting Conversation {current_i+1}/{len(cli_input_df.index)}: QA ID {row.qa_id} ---") # Updated message
 

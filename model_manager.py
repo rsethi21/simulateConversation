@@ -19,6 +19,8 @@ class ModelManager:
             clean_up_tokenization_spaces=False,
             token=token
             )
+            tokenizer.pad_token = tokenizer.eos_token  # Ensure pad token is set
+            tokenizer.padding_side = "left"  # Ensure padding is on the right
             model = AutoModelForCausalLM.from_pretrained(
                 model_name,
                 cache_dir=str(self.cache_dir),
@@ -32,6 +34,8 @@ class ModelManager:
                 cache_dir=str(self.cache_dir),
                 clean_up_tokenization_spaces=False
             )
+            tokenizer.pad_token = tokenizer.eos_token  # Ensure pad token is set
+            tokenizer.padding_side = "left"  # Ensure padding is on the right
             model = AutoModelForCausalLM.from_pretrained(
                 model_name,
                 cache_dir=str(self.cache_dir),
