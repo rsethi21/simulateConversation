@@ -21,11 +21,11 @@ default_warmup_tokens: 0 # New: Number of tokens used to linearly warm up steeri
 default_min_intensity_a: 0 # -225.0 # 150.0 # New: Minimum intensity floor after warmup/decay
 default_min_intensity_b: 1.0
 steering_vector_layer_a: null # New: Configurable layer for steering vector application
-steering_vector_layer_b: "post_attention_layernorm" # New: Configurable layer for steering vector application
+steering_vector_layer_b: "" # "post_attention_layernorm" # New: Configurable layer for steering vector application
 
 # Preloaded Steering Vectors (PyTorch .pt files)
 vector_a: null
-vector_b: ./vectors/angry_llama_23_post.pt
+vector_b: ./vectors/archive/llama_hate_multi.pt
 
 # Default Roles (one for each model, displayed in UI text boxes)
 default_role_a: |
@@ -55,16 +55,16 @@ default_name_b: "Patient"
 
 # Default Knowledge Bases (text files, relative to knowledge_base_dir)
 # These are now folders that will contain individual KB files for dynamic loading
-default_knowledge_base_a_folder: "knowledge_bases" # e.g., "knowledge_bases/physician_kb"
-default_knowledge_base_b_folder: "knowledge_bases" # e.g., "knowledge_bases/patient_kb"
+default_knowledge_base_a_folder: knowledge_bases # e.g., "knowledge_bases/physician_kb"
+default_knowledge_base_b_folder: knowledge_bases # e.g., "knowledge_bases/patient_kb"
 
 # UI Preferences
 ui_theme: "light"
 
 # CLI Settings
 # cli_input_folder: "./cli_inputs" # Removed: Input is now from a CSV
-cli_input_data: "./inputs/tuning.csv" # New: Path to the CSV input file
+cli_input_data: "./inputs/sample_inputs_trimmed.csv" # New: Path to the CSV input file
 cli_max_turns: 3 # Number of turns for the CLI conversation
-cli_output_folder: "./outputs/llama_individual_angry" # Folder to save individual conversation history files
+cli_output_folder: "./outputs/llama_hate" # Folder to save individual conversation history files
 cli_starting_model: "model_a" # Which model starts the CLI conversation
-"batch_size": 3 # New: Batch size for processing conversations in the CLI
+"batch_size": 1 # New: Batch size for processing conversations in the CLI

@@ -134,9 +134,9 @@ def run_cli_conversation():
     current_i = 0
     # ...existing code...
     # for i, question_file_path in enumerate(question_files): # Replaced with DataFrame iteration
-    while current_i < len(cli_input_df.index[0:2]):
+    while current_i < len(cli_input_df.index):
         rows = cli_input_df.iloc[current_i:current_i+batch_size] # Get batch of rows
-        # print(f"\n--- Starting Conversation {current_i+1}/{len(cli_input_df.index)}: QA ID {row.qa_id} ---") # Updated message
+        print(f"\n--- Starting Conversation {current_i+1}/{len(cli_input_df.index)} ---") # Updated message
 
         # starting_prompt = load_prompt_from_file(question_file_path) # Removed
         starting_prompts = list(rows.question) # New: Get prompt from DataFrame row
@@ -193,7 +193,7 @@ def run_cli_conversation():
             for i, batch in enumerate(responses_list):
                 for model_key, content in batch.items():
                     display_name = llm_a.model_display_name if model_key == "model_a" else llm_b.model_display_name
-                    # print(f"[{display_name}]: {content}")
+                    print(f"[{display_name}]: {content}")
                     conversation_history[i].append(f"[{display_name}]: {content}")
 
         except Exception as e:
@@ -216,7 +216,7 @@ def run_cli_conversation():
                 for i, batch in enumerate(responses_list):
                     for model_key, content in batch.items():
                         display_name = llm_a.model_display_name if model_key == "model_a" else llm_b.model_display_name
-                    # print(f"[{display_name}]: {content}")
+                    print(f"[{display_name}]: {content}")
                     conversation_history[i].append(f"[{display_name}]: {content}")
             except Exception as e:
                 print(f"Error during turn {turn+1} for {row.qa_id}: {e}") # Updated error message

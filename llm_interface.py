@@ -86,6 +86,16 @@ class LLMInterface:
         decay_factor = self.decay_rate ** decay_position
         return max(self.min_intensity, decay_factor)
     
+    def _calculate_intensity(self, steering_tensor: torch.Tensor, original_output: torch.Tensor) -> float:
+        norm_steering = torch.norm(steering_tensor)
+        norm_output = torch.norm(original_output, dim=-1, keepdim=True)  # Compute norm across the last dimension for each token in the batch
+        sim = 1 - torch.nn.functional.cosine_similarity(original_output, steering_tensor, dim=-1).unsqueeze(-1)  # Compute cosine similarity for each token in the batch
+        try:
+            base_intensity = (norm_output / norm_steering.item()) * sim
+            return base_intensity
+        except ZeroDivisionError:
+            return torch.ones((norm_output.shape[0], norm_output.shape[1], 1))  # Default to 1.0 if steering vector is zero
+
     def set_personality(self, personality: str):
         """Set the system prompt (personality) for this model."""
         self.system_prompt = personality
@@ -138,8 +148,9 @@ class LLMInterface:
                                 # Get the dtype of the model's activation
                                 target_dtype = original_output_tensor.dtype
                                 
-                                decay_factor = self._calculate_decay(self.token_index) # self.token_index will be updated by LogitsProcessor
-                                adjusted_intensity = self.steering_vector.intensity * decay_factor
+                                # decay_factor = self._calculate_decay(self.token_index) # self.token_index will be updated by LogitsProcessor
+                                adjusted_intensity = self._calculate_intensity(base_steering_tensor, original_output_tensor)
+                                # self.steering_vector.intensity * decay_factor
                                 
                                 # Cast the base_steering_tensor to the target_dtype before addition
                                 # This ensures dtype consistency with the model's activations
@@ -148,9 +159,10 @@ class LLMInterface:
                                 # Perform the addition directly on tensors, maintaining dtype
                                 steered_output = original_output_tensor.clone()
                                 if steered_output.shape[1] > 1: # First pass (Prompt processing)
-                                    steered_output[:,self.system_prompt_tokens_length:,:] = original_output_tensor[:,self.system_prompt_tokens_length:,:] + adjusted_intensity * steering_tensor_on_device_and_dtype
+                                    # steered_output[:,self.system_prompt_tokens_length:,:] = original_output_tensor[:,self.system_prompt_tokens_length:,:] + adjusted_intensity * steering_tensor_on_device_and_dtype
+                                    steered_output = original_output_tensor + self.steering_vector.intensity * adjusted_intensity * steering_tensor_on_device_and_dtype
                                 else:
-                                    steered_output = original_output_tensor + adjusted_intensity * steering_tensor_on_device_and_dtype
+                                    steered_output = original_output_tensor + self.steering_vector.intensity * adjusted_intensity * steering_tensor_on_device_and_dtype
                                 
                                 if isinstance(output, tuple):
                                     return (steered_output,) + output[1:]
